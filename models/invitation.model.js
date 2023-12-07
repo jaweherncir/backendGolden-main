@@ -1,0 +1,96 @@
+const mongoose= require("mongoose");
+const {ObjectId}= mongoose.Schema;
+
+const InvitationSchema = new mongoose.Schema(
+    {
+        userID:{
+            type:String,
+            required:true
+        },
+        senderReqFreinds:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number
+                }
+            ],
+        },
+        reciverReqFreinds:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number
+                }
+            ],
+        },
+        senderReqJumlage:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number
+                }
+            ],
+        },
+        reciverReqJumlage:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number
+                }
+            ],
+        },
+        senderReqCoupCoeur:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number
+                }
+            ],
+        },
+        reciverCoupCoeur:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number
+                }
+            ],
+        },
+        senderReqEvenementPart:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number
+                }
+            ]
+        },
+        reciverReqEvenementPart:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number
+                }
+            ]
+        },
+        senderAccesAlbum:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number,
+                    duree:Number
+
+                }
+            ],
+        },
+        reciverAccesAlbum:{
+            type:[
+                {
+                    _id:{type:ObjectId,ref:"user"},
+                    timestamp:Number,
+                    duree:Number
+                }
+            ],
+        },
+    }
+
+);
+module.exports=mongoose.model('invitation',InvitationSchema);
