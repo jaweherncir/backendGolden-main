@@ -3,31 +3,26 @@ const moment = require("moment");
 const NotificationModel = require("../models/notifications.model");
 const InvitationMedel = require("../models/invitation.model");
 const AlbumModel = require("../models/album.model");
+
+const ewallet=require("../models/Ewallet.model")
+const bcrypt = require('bcrypt');
+const rencontre=require("../models/Rencontre.model")
+const EvenementProModel = require("../models/evenementpro");
+const evenementprive=require("../models/evenementprive")
+const jumlage =require ("../models/jumlage.model")
+const pagepro =require ("../models/pagepro.model")
+const post =require ("../models/post.model")
 const fs = require("fs");
 const UserModel = require("../models/user.model");
-const EvenementProModel = require("../models/evenementpro");
+const nodemailer = require("nodemailer");
 const ObjectID = require("mongoose").Types.ObjectId;
-const express = require("express");
-
-
-
-
-module.exports.getAllUsers= async (req,res) =>{
-    const users = await userModel.find().select('-password');//afiicher touts les information des users sauf password
-    res.status(200).json(users);
-
-}
-module.exports.getAllUseerBlock= async (req,res) =>{
-    const users = await userModel.find().select('blocked')
-        .populate({path:'blocked',select:['nom','prenom','email','genre','numero','villeconnue','dateNass']});//afiicher touts les information des users sauf password
-    res.status(200).json(users[0].blocked);
-
-}
-module.exports.getAllCountUsers= async (req,res) =>{
-    const users = await userModel.find();//afiicher touts les information des users sauf password
-    res.status(200).json({result:users.length});
-}
-module.exports.userInfo= async (req,res) =>{
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+    cloud_name: "dm0c8st6k",
+    api_key: "541481188898557",
+    api_secret: "6ViefK1wxoJP50p8j2pQ7IykIYY"
+  });
+  module.exports.userInfo= async (req,res) =>{
     console.log(req.params);
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
         return res.status(400).send('ID unknown : '+ req.params.id);
@@ -40,7 +35,74 @@ module.exports.userInfo= async (req,res) =>{
 
     });
 }
-module.exports.updateUser= async (req,res) =>{
+module.exports.DeleteUser = async (req, res) => {
+    const id = req.params.id;
+
+    try {
+      // Find the user by ID
+      const user = await UserModel.findById(id);
+  
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Delete user
+      await UserModel.findByIdAndRemove(id);
+      // Delete associated notifications
+      await NotificationModel.deleteMany({ userID: id });
+       // Delete associated orderq
+      await InvitationMedel.deleteMany({ userID: id });
+       // Delete associated panier
+      await AlbumModel.deleteMany({ userId: id });
+      await ewallet.deleteMany({ userId: id });
+      await rencontre.deleteMany({ userID: id });
+      await EvenementProModel.deleteMany({ userId: id });
+      await evenementprive.deleteMany({ userId: id });
+      await jumlage.deleteMany({ userId: id });
+      await pagepro.deleteMany({ userId: id });
+      await post.deleteMany({ userId: id });
+      return res.status(200).json({ message: 'User deleted successfully' });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+//send rapport apres la suppression 
+module.exports.sendraport = async (req, res) => {
+    const { from, to, subject, text } = req.body;
+    const smtpHost = 'smtppro.zoho.com';
+    const smtpPort = 465;
+    const smtpUser = 'Servicedesk@freezepix.com';
+    const smtpPass = 'Freezepix2023'; // Please make sure to store sensitive information securely
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: true, // Use SSL
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  });
+
+  const mailOptions = {
+    from: `"${from}" <${smtpUser}>`, // Include the user's email in the "from" field
+    to: "Servicedesk@freezepix.com",
+    subject,
+    text,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error(error);
+      res.status(500).json({ error: 'An error occurred while sending the email.' });
+    } else {
+      console.log('Email sent: ' + info.response);
+      res.json({ message: 'Email sent successfully!' });
+    }
+  });
+  };
+  module.exports.updateUser= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
         return res.status(400).send('ID unknown : '+ req.params.id);
     try {
@@ -89,19 +151,125 @@ module.exports.updateUser= async (req,res) =>{
     }
 
 }
-module.exports.DeleteUser = async (req,res)=>{
-    if (!ObjectID.isValid(req.params.id))
-        return res.status(400).send('ID unknown '+req.params.id);
+//update password
+
+module.exports.updateUserPassword = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) {
+        return res.status(400).send('ID unknown: ' + req.params.id);
+    }
+
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
     try {
-        await userModel.remove({_id:req.params.id})
-        res.status(200).json({message: "succes deleted"});
+        const user = await userModel.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
-    }catch (err)
-    {
-        return res.status(500).json({message: err});
+        const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: 'Old password is incorrect' });
+        }
 
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ message: 'Votre mot de passe et votre confirmation ne correpondent pas, merci de vérifier.' });
+        }
+
+        // Password complexity requirements
+        const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{16,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            return res.status(400).json({
+                message: 'Votre mot de passe doit être composé d’au moins 16 caractères et doit comporter au moins une majuscule,un caractèrespécial et un chiffre.'
+            });
+        }
+
+        // Check if the new password contains at least one uppercase letter
+        if (!/[A-Z]/.test(newPassword)) {
+            return res.status(400).json({ message: 'Votre mot de passe doit être composé d’au moins 16 caractères et doit comporter au moins une majuscule, un caractère spécial et un chiffre.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        user.password = hashedPassword;
+        const updatedUser = await user.save();
+
+        return res.send(updatedUser);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
     }
 }
+module.exports.updatePseudo = async (req, res) => {
+    const userId = req.params.id;
+
+    if (!ObjectID.isValid(userId)) {
+        return res.status(400).send('Invalid ID: ' + userId);
+    }
+
+    const { pseudo } = req.body;
+
+    try {
+        // Check if the new pseudo is already associated with another account
+        const existingUser = await userModel.findOne({ pseudo: pseudo });
+        if (existingUser && existingUser._id.toString() !== userId) {
+            return res.status(400).json({ message: 'Ce pseudo est déjà associé à un autre compte' });
+        }
+
+        // Check if the pseudo is available (libre)
+        const currentUser = await userModel.findById(userId);
+        if (!currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update the user's pseudo if it's associated with the current user
+        if (currentUser.pseudo !== pseudo) {
+            currentUser.pseudo = pseudo;
+            const updatedUser = await currentUser.save();
+            return res.send(updatedUser);
+        } else {
+            return res.status(200).json({ message: 'Ce pseudo est libre' });
+        }
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+module.exports.getAllUsers= async (req,res) =>{
+    const users = await userModel.find().select('-password');//afiicher touts les information des users sauf password
+    res.status(200).json(users);
+
+}
+module.exports.getAllUseerBlock= async (req,res) =>{
+    const users = await userModel.find().select('blocked')
+        .populate({path:'blocked',select:['nom','prenom','email','genre','numero','villeconnue','dateNass']});//afiicher touts les information des users sauf password
+    res.status(200).json(users[0].blocked);
+
+}
+
+
+
+
+module.exports.getAllCountUsers= async (req,res) =>{
+    const users = await userModel.find();//afiicher touts les information des users sauf password
+    res.status(200).json({result:users.length});
+}
+
+
+
 module.exports.follow = async (req,res) => {
     if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.idToFollow) )
         return res.status(400).send('ID unknown '+req.params.id);
@@ -177,12 +345,6 @@ module.exports.unfollow = async (req,res) => {
     }
 
 }
-const cloudinary = require('cloudinary').v2;
-cloudinary.config({
-    cloud_name: "dm0c8st6k",
-    api_key: "541481188898557",
-    api_secret: "6ViefK1wxoJP50p8j2pQ7IykIYY"
-  }); 
 
   module.exports.updateProfil = async (req, res) => {
     if (!ObjectID.isValid(req.params.id)) {

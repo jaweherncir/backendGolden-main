@@ -74,47 +74,35 @@ module.exports.signUp= async (req,res) =>{
 
 }
 */
-module.exports.signUp= async (req,res) =>{
-    const  {
-        pseudo,nom,prenom,dateNass
-    }=req.body
-
+module.exports.signUp = async (req, res) => {
+    const { pseudo, nom, prenom, dateNass } = req.body;
+  
     try {
-        const user = await  UserModel.create({pseudo,nom,prenom,dateNass
-
-        });
-
-        if (user)
-        {
-            const newInvitModel = new InvitationModel(
-                {
-                    userID:user._id
-                }
-            );
-            const newNotificationsModel= new NotificationsModel(
-                {
-                    userID:user._id
-                }
-
-            );
-            const newRencontreModel = new RencontreModel({
-                userID:user._id
-            });
-            await newInvitModel.save();
-            await newNotificationsModel.save();
-            await newRencontreModel.save();
-            res.status(201).send(user);
-
-        }
+      const user = await UserModel.create({ pseudo, nom, prenom, dateNass });
+  
+      if (user) {
+        // Create and sign a token
+        const token = jwt.sign({ userId: user._id }, 'your_secret_key', { expiresIn: '1h' }); // Change 'your_secret_key' to your actual secret key
+  
+        // Set the token in cookies
+        res.cookie('token', token, { httpOnly: true, maxAge: 3600000 }); // 'maxAge' is set to 1 hour (in milliseconds)
+  
+        // Create and save related models (if needed)
+        const newInvitModel = new InvitationModel({ userID: user._id });
+        const newNotificationsModel = new NotificationsModel({ userID: user._id });
+        const newRencontreModel = new RencontreModel({ userID: user._id });
+  
+        await newInvitModel.save();
+        await newNotificationsModel.save();
+        await newRencontreModel.save();
+  
+        res.status(201).send(user);
+      }
+    } catch (err) {
+      const errors = singUpErrors(err);
+      res.status(401).send({ errors });
     }
-    catch (err){
-        const errors = singUpErrors(err);
-        res.status(401).send({errors});
-
-        // console.log(err);
-    }
-
-}
+  };
 //update etape1 
 module.exports.updateEtape1= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
@@ -178,176 +166,95 @@ module.exports.updateCodeParinage= async (req,res) =>{
     }
 
 }
-//updaet to add photo profil  
-//avec algorithme de prohibé 
- function GetIDPhotoFromAlbum(list){
-    var last = [].slice.call(list).pop()._id;
-    return last
-
-
-}
-/*
-module.exports.updatePhotoProfil= async (req,res) =>{
-    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
-        return res.status(400).send('ID unknown : '+ req.params.id);
+module.exports.updatePhotoProfil = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) {
+        return res.status(400).send('ID unknown: ' + req.params.id);
+    }
+    
     try {
-        AlbumModel.findOneAndUpdate(
-            {"userId":req.params.id},
-            {
-                $push: {
-                    photosprofile: {
-                        //data:Buffer.from(req.file.filename,"base64"),
-                        data:fs.readFileSync("client/"+req.file.filename),
-                        contentType:"image/jpg",
-                        timestamp:new Date().getTime()
-                    }
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: `Golden/users/${req.params.id}/profile_photos`, // Store images in a folder based on user ID
+        });
 
+        // Update the user model with the photo URL
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            { _id: req.params.id },
+            {
+                $set: {
+                    photo: result.secure_url // Store the secure URL of the uploaded image in the user model
                 }
             },
-            {new: true, upsert: true, setDefaultsOnInsert:true},
-            (err,data) =>{
-                console.log(data._id)
-                if (!err) {
-                   // return res.send(data);
-                    console.log( GetIDPhotoFromAlbum(data.photosprofile))
-                     UserModel.findByIdAndUpdate(
-                         {_id:req.params.id},
-                         {$set:{
-                                 photo:GetIDPhotoFromAlbum(data.photosprofile)
-                             }
-                         },
-                         {new:true, upsert:true},
-                         (errr,data)=>{
-                             if(!errr)  res.send(data);
-                             else res.send(errr)
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
 
-                         }
-                     );
-                }
-                if (err) return  res.status(500).send({message: err});
-            }
-        )
-    }catch(err) {
-
-        return res.status(500).json({message: err});
-    }
-
-}
-*/
-module.exports.updatePhotoProfil= async (req,res) =>{
-    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
-        return res.status(400).send('ID unknown : '+ req.params.id);
-    try {
-        albumModel= new AlbumModel({
-            userId: req.params.id,
-            picture:{
-                data:fs.readFileSync("client/public/uploads/album/"+req.file.filename),
-                contentType:"image/jpg",
-                timestamp:new Date().getTime()
-            }
-        });
-        const addphotoprofile= await albumModel.save();
-        if (addphotoprofile){
-           await UserModel.findByIdAndUpdate(
-                {_id:req.params.id},
-                {$set:{
-                        photo:addphotoprofile._id
+        // Update the user's album with the photo URL
+        const updatedAlbum = await AlbumModel.findOneAndUpdate(
+            { userId: req.params.id },
+            {
+                $push: {
+                    photos: {
+                        url: result.secure_url
                     }
-                },
-                {new:true, upsert:true},
-                (errr,data)=>{
-                    if(!errr)  res.status(201).send(data);
-                    else res.status(401).send(errr)
-
                 }
-            );
+            },
+            { new: true, upsert: true }
+        );
 
-        }
-    }catch(err) {
-
-        return res.status(500).json({message: err});
-    }
-
-}
-
-module.exports.updatePhotoCouvertir= async (req,res) =>{
- if (!ObjectID.isValid(req.params.id)) {
-      return res.status(400).send('ID unknown: ' + req.params.id);
-    }
-  
-    try {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: `Golden/users/profile_photos/${req.params.id}`, // Store images in a folder based on user ID
-      });
-  
-      await UserModel.findByIdAndUpdate(
-        { _id: req.params.id },
-        {
-          $set: {
-            photo: result.secure_url // Store the secure URL of the uploaded image
-          }
-        },
-        { new: true, upsert: true, setDefaultsOnInsert: true },
-        (err, data) => {
-          if (!err) return res.send(data);
-          if (err) return res.status(500).send({ message: err });
-        }
-      );
+        return res.send({  album: updatedAlbum }); // Send the updated user and album data
     } catch (err) {
-      return res.status(500).json({ message: err });
+        return res.status(500).json({ message: err });
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
-        return res.status(400).send('ID unknown : '+ req.params.id);
+};
+module.exports.updatePhotoCouvertir= async (req,res) =>{
+    if (!ObjectID.isValid(req.params.id)) {
+        return res.status(400).send('ID unknown: ' + req.params.id);
+    }
+    
     try {
-        albumModel= new AlbumModel({
-            userId: req.params.id,
-            picture:{
-                data:fs.readFileSync("client/public/uploads/album/"+req.file.filename),
-                contentType:"image/jpg",
-                timestamp:new Date().getTime()
-            }
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: `Golden/users/${req.params.id}/couvertir_photos`, // Store images in a folder based on user ID
         });
-        const addphotocouverture= await albumModel.save();
-        if (addphotocouverture){
-            await UserModel.findByIdAndUpdate(
-                {_id:req.params.id},
-                {$set:{
-                        couvertir:addphotocouverture._id
-                    }
-                },
-                {new:true, upsert:true},
-                (errr,data)=>{
-                    if(!errr)  res.status(201).send(data);
-                    else res.status(401).send(errr)
 
+        // Update the user model with the photo URL
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            { _id: req.params.id },
+            {
+                $set: {
+                    couvertir: result.secure_url // Store the secure URL of the uploaded image in the user model
                 }
-            );
+            },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
 
-        }
-    }catch(err) {
+        // Update the user's album with the photo URL
+        const updatedAlbum = await AlbumModel.findOneAndUpdate(
+            { userId: req.params.id },
+            {
+                $push: {
+                    photos: {
+                        url: result.secure_url
+                    }
+                }
+            },
+            { new: true, upsert: true }
+        );
 
-        return res.status(500).json({message: err});
+        return res.send({  album: updatedAlbum }); // Send the updated user and album data
+    } catch (err) {
+        return res.status(500).json({ message: err });
     }
-
-}
-//update add user
+   
+   
+   
+   
+   
+   
+   
+      
+   
+   }
 //add genre
-module.exports.updateGenre= async (req,res) =>{
+ module.exports.updateGenre= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
         return res.status(400).send('ID unknown : '+ req.params.id);
     try {
@@ -477,65 +384,8 @@ module.exports.prfession= async (req,res) =>{
     }
 
 
-}
-//add metier
-/*
-module.exports.metier2= async (req,res) =>{
-    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
-        return res.status(400).send('ID unknown : '+ req.params.id);
-    try {
-        await UserModel.findByIdAndUpdate(
-            {_id:req.params.id},
-            {
-                $set: {
-                    metier: req.body.metier,
+}  
 
-
-                }
-            },
-            {new: true, upsert: true, setDefaultsOnInsert:true},
-            (err,data) =>{
-                if (!err) return res.send(data);
-                if (err) return  res.status(500).send({message: err});
-            }
-        )
-    }catch(err) {
-
-        return res.status(500).json({message: err});
-    }
-
-
-}
-*/
-//add attirance
-/*
-module.exports.attirance= async (req,res) =>{
-    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
-        return res.status(400).send('ID unknown : '+ req.params.id);
-    try {
-        await UserModel.findByIdAndUpdate(
-            {_id:req.params.id},
-            {
-                $set: {
-                    attirance: req.body.attirance,
-
-
-                }
-            },
-            {new: true, upsert: true, setDefaultsOnInsert:true},
-            (err,data) =>{
-                if (!err) return res.send(data);
-                if (err) return  res.status(500).send({message: err});
-            }
-        )
-    }catch(err) {
-
-        return res.status(500).json({message: err});
-    }
-
-
-}
-*/
 //add relationRechercher
 module.exports.relationRechercher= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
@@ -724,48 +574,44 @@ module.exports.sihloutte= async (req,res) =>{
 
 
 }
-
-module.exports.certificat= async (req,res) =>{
+module.exports.certificat = async (req, res) => {
     if (!ObjectID.isValid(req.params.id)) {
         return res.status(400).send('ID unknown: ' + req.params.id);
-      }
+    }
     
-      try {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: `Golden/users/certification_photos/${req.params.id}`, // Store images in a folder based on user ID
-        });
-    
-        await UserModel.findByIdAndUpdate(
-          { _id: req.params.id },
-          {
-            $set: {
-                certificat: result.secure_url // Store the secure URL of the uploaded image
-            }
-          },
-          { new: true, upsert: true, setDefaultsOnInsert: true },
-          (err, data) => {
-            if (!err) return res.send(data);
-            if (err) return res.status(500).send({ message: err });
-          }
+    try {
+        const certificatObjects = [];
+
+        // Upload multiple certification photos to Cloudinary
+        for (const file of req.files) {
+            const result = await cloudinary.uploader.upload(file.path, {
+                folder: `Golden/users/${req.params.id}/certification_photos`
+            });
+            certificatObjects.push({ certif: result.secure_url, etat: 'NON' });
+        }
+
+        // Find the user by ID and update their certificat field
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            { _id: req.params.id },
+            {
+                $push: {
+                    certificat: { $each: certificatObjects } // Add new certification photos with 'encours' status
+                }
+            },
+            { new: true }
         );
-      } catch (err) {
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.send({ user: updatedUser }); // Send the updated user data
+    } catch (err) {
         return res.status(500).json({ message: err });
-      }
+    }
+};
 
-
-
-
-
-
-
-
-
-
-    
-
-
-}
-
+//Questionnaire api  
 
 module.exports.Etape1= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
@@ -898,33 +744,47 @@ module.exports.Etape5= async (req,res) =>{
     }
 
 }
-
-module.exports.signIn=async (req,res) =>{
-    const {email,password } = req.body
+module.exports.signIn = async (req, res) => {
+    const { email, password } = req.body;
+  
     try {
-        const user = await UserModel.login(email,password); //verifier si cette utilisateur existe ou non dans la base de donee
-        const token = createToken(user._id);
-
-        //console.log(user);
-       // console.log(token);
-        res.cookie('jwt', token,{httpOnly: true, maxAge})  ;
-        res.status(201).json(user);
-
-    }catch (err){
-        const errors =singInErrors(err)
-        res.status(500).json({errors});
-
+      // Find the user by their email
+      const user = await UserModel.findOne({ email });
+  
+      if (user) {
+         // Create and sign a token
+         const token = jwt.sign({ userId: user._id }, 'your_secret_key', { expiresIn: '1h' }); // Change 'your_secret_key' to your actual secret key
+  
+         // Set the token in cookies
+         res.cookie('token', token, { httpOnly: true, maxAge: 3600000 }); // 'maxAge' is set to 1 hour (in milliseconds)
+        // If the user is found, compare passwords
+        const auth = await bcrypt.compare(password, user.password);
+  
+        if (auth) {
+          // Passwords match, user is authenticated
+          res.status(200).json({ message: 'Login successful', user });
+        } else {
+          // Passwords don't match
+          res.status(401).json({ message: 'Incorrect password' });
+        }
+      } else {
+        // User not found
+        res.status(404).json({ message: 'User not found' });
+      }
+    } catch (error) {
+      // Handle any errors that occur
+      res.status(500).json({ message: 'An error occurred', error: error.message });
     }
-
-}
+};
 module.exports.logOut=async (req,res) =>{
-    res.cookie('jwt','',{maxAge:1}); //max age 1 mellisecound (supprimer le cookie)
-    res.redirect('/');
+   
+    res.clearCookie("token"); // Clears the token cookie
+   
+    res.json({ message: "Logged out successfully" });
+
 
 
 }
-
-
 exports.forgotPassword = async(req, res) => {
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
@@ -1023,3 +883,25 @@ exports.resetPassword =async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
       }
 };
+
+//avec algorithme de prohibé 
+ function GetIDPhotoFromAlbum(list){
+    var last = [].slice.call(list).pop()._id;
+    return last
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

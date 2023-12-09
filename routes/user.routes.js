@@ -7,37 +7,6 @@ const fs = require('fs');
 const shortid = require('shortid');
 const { passwordResetValidator} = require('../utils/errors.utils');
 const {getALLGalleryPublicByUSER, getALLGalleryPriveByUSER} = require("../controller/user.controller");
-//const utlisateurController = require("../controller/utlisateur.controller");
-/*
-const my_storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null,path.join(path.dirname(__dirname),"client/public/uploads/profil"))
-    },
-
-    filename: (req, file, cb) => {
-        cb(null,shortid.generate()+"_"+file.originalname)
-    },
-
-    limits: {
-        fileSize: 1024 * 1024
-    }
-});
-var uploadImageUser=multer({storage:my_storage})
-// file filter function
-const fileFilterFunction = (req, file, cb) => {
-    const file_extention = path.extname(file.originalname);
-    const allowedExtentions = [".jpg", ".jpeg", ".png"]
-    if (!allowedExtentions.includes(file_extention)) {
-        return cb(new Error('Only images are allowed'))
-    }
-
-    cb(null, true)
-};
-const upload = multer({ storage: my_storage },{fileFilter:fileFilterFunction})
-var cpUpload = upload.fields([{ name: 'photo' }, { name: 'couvertir'}])
-//to update image single
-var uploadImageUser=multer({storage:my_storage})
-*/
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, "client/public/uploads/album");
@@ -58,16 +27,17 @@ const storagecerttificat = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 const uploadcertif = multer({ storage: storagecerttificat });
-
-//authentification
+//test final
+//1 register 
+//aregister
 router.post("/registre",authController.signUp);
 //update user Etape1
 router.put("/signupIdentifiant/:id",authController.updateEtape1)
 //update code parinage ettape2
 router.put("/signupParinage/:id",authController.updateCodeParinage)
 //update to add photo profil
-router.put("/signupApparance/:id",upload.single('profil'),authController.updatePhotoProfil)
-router.put("/signupCertification/:id",upload.single('couvertir'),authController.updatePhotoCouvertir)
+router.put("/addProfilImage/:id",upload.single('profil'),authController.updatePhotoProfil)
+router.put("/signupCouverture/:id",upload.single('couvertir'),authController.updatePhotoCouvertir)
 router.put("/signupGenre/:id",authController.updateGenre)
 router.put("/signupOrientation/:id",authController.orientationsexe)
 router.put("/signupLangue/:id",authController.langue)
@@ -81,17 +51,35 @@ router.put("/signupMusique/:id",authController.musique)
 router.put("/signupCaractere/:id",authController.caractere)
 router.put("/signupPersonalite/:id",authController.personalite)
 router.put("/signupShiloutte/:id",authController.sihloutte)
-router.put("/signupCertificat/:id",uploadcertif.single('certificat'),authController.certificat)
+router.put("/signupCertificat/:id",uploadcertif.array('certificat',2),authController.certificat)
 //questianire
 router.put("/etape1/:id",authController.Etape1)
 router.put("/etape2/:id",authController.Etape2)
 router.put("/etape3/:id",authController.Etape3)
 router.put("/etape4/:id",authController.Etape4)
 router.put("/etape5/:id",authController.Etape5)
-router.post("/login",authController.signIn);
-router.get("/logout",authController.logOut);
+//password
 router.post('/email-password-send',authController.forgotPassword)
 router.post('/change-password',authController.resetPassword)
+//login logout
+router.post("/login",authController.signIn);
+router.get("/logout",authController.logOut);
+
+//Regalege compte of user 
+router.get("/:id",userController.userInfo);
+router.delete("/:id",userController.DeleteUser);
+router.post("/sendProblem",userController.sendraport)
+//update user 
+router.put("/:id",userController.updateUser);
+//update passwrod ??
+router.put("/updatepassword/:id",userController.updateUserPassword);
+router.put("/updatePseudo/:id",userController.updatePseudo);
+
+
+
+
+
+
 
 //user display block
 router.get("/",userController.getAllUsers);
@@ -111,10 +99,10 @@ router.get("/years",userController.getCountUSerParYears);
 
 
 
+ 
 
-router.get("/:id",userController.userInfo);
-router.put("/:id",userController.updateUser);
-router.delete("/:id",userController.DeleteUser);
+
+
 router.patch("/:id",userController.follow);// id de user qui deja connecter
 router.patch("/unfollow/:id",userController.unfollow);
  

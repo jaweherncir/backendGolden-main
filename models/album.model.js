@@ -1,25 +1,32 @@
 const mongoose = require("mongoose");
 const ObjectID = require("mongoose").Types.ObjectId;
 
-const AlbumSchema=new mongoose.Schema(
+const AlbumSchema = new mongoose.Schema(
     {
-        userId:{
-            type:ObjectID,
-            ref:"user"
+        userId: {
+            type: ObjectID,
+            ref: "user"
         },
-        visible:{
+        visible: {
             type: Boolean,
             default: true
         },
-        picture:[{
-                    data: Buffer,
-                    contentType:String,
-                    timestamp:Number
-        }],
-
-    },{
-        timestamps:true
+        photos: [
+            {
+                url: {
+                    type: String,
+                    required: true
+                },
+                timestamp: {
+                    type: Number,
+                    default: Date.now
+                }
+            }
+        ]
+    },
+    {
+        timestamps: true
     }
-
 );
+
 module.exports=mongoose.model('album',AlbumSchema);

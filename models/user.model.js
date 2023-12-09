@@ -35,7 +35,8 @@ const userSchema = new mongoose.Schema(
 
         photo:{
            type:String,
-            ref:"album"
+            ref:"album",
+            default: Date.now  // Adding default value as Date.now
 
         },
 
@@ -96,11 +97,20 @@ const userSchema = new mongoose.Schema(
         sihloutte:{
             type:[String]
         },
-
-        certificat:{
-            type: String,
-           
-        },
+        certificat: [
+            {
+                certif: {
+                    type: String,
+                    // Other properties or validations for the certification photo if needed
+               
+                },
+                etat: {
+                    type: String,
+                    enum: ['NON', 'OUI', 'EN COURS'],
+                    default: 'NON' // Set default status as 'non' if not specified
+                  }
+            }
+        ],
 
         etape1:{
             pseudopro:String,
