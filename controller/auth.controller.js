@@ -785,71 +785,90 @@ module.exports.logOut=async (req,res) =>{
 
 
 }
-exports.forgotPassword = async(req, res) => {
+exports.forgotPassword = async (req, res) => {
     const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-      });
-      const email = req.body.email;
-      const user = await UserModel.findOne({ email: email });
-      const lastname=user.name
-    
-      if (!user) {
-        return res.status(404).json({ message: "email is not associated with an account" });
-      }
-    
-      // Generate a new random password
-      const newPassword = generateRandomPassword(); // Implement this function
-    
-      // Hash the new password before storing it in the database
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
-      // Update the user's password
-      user.password = hashedPassword;
-    
-      // Clear the reset token and expiration date
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpires = undefined;
-    
-      // Save the updated user
-      await user.save();
-    
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
   
-    
-      const mailOptions = {
-        from: process.env.SMTP_USER,
-        to: email,
-        subject: "Password reset",
-        html: `
-          <p  style="color: blue; font-size: 18px;"> Hello ${lastname},</p>
-          <p>You have requested a reset of your email password and ${user.email} </p>
-          <p >Your new password is: <h1 style="color: red; font-size: 24px;">${newPassword}<h1></p>
-          <p>this password is temporary .</p>
-          <p>Sincerely,</p>
-          <p>freezepix technical service</p>
-        `,
-      };
-    
-      try {
-        await transporter.sendMail(mailOptions);
-        return res.status(200).json({
-          message: " Your new password has been included in the email.",
-        });
-      } catch (error) {
-        return next(error);
-      }
-};
+    const email = req.body.email;
+    const user = await UserModel.findOne({ email: email });
+  
+    if (!user) {
+      return res.status(404).json({ message: "Il semblerait qu’il y ait une erreur. Votre adresse mail est invalide. Merci de recommencer." });
+    }
+  
+    // Generate a new random password
+    const newPassword = generateRandomPassword(); // Implement this function
+  
+    // Hash the new password before storing it in the database
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+  
+    // Update the user's password
+    user.password = hashedPassword;
+  
+    // Clear the reset token and expiration date
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+  
+    // Save the updated user
+    await user.save();
+  
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: "Password reset",
+      html: `
+        <p  style="color: blue; font-size: 18px;"> Hello ${user.name},</p>
+        <p>You have requested a reset of your email password and ${user.email} </p>
+        <p >Your new password is: <h1 style="color: red; font-size: 24px;">${newPassword}<h1></p>
+        <p>this password is temporary .</p>
+        <p>Sincerely,</p>
+        <p>freezepix technical service</p>
+      `,
+    };
+  
+    try {
+      await transporter.sendMail(mailOptions);
+      return res.status(200).json({
+        message: "Your new password has been included in the email.",
+      });
+    } catch (error) {
+      return next(error);
+    }
+  };
+  
 function generateRandomPassword() {
-    const characters = '0123456789'; // Only include digits for a 6-digit password
-    const password = Array.from({ length: 6 }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
-    return password;
+    const length = 16;
+    const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercaseChars = 'abcdefghijklmnopqrstuvwxyz';
+    const numericChars = '0123456789';
+    const specialChars = '#@!$%^&*()_+{}[]|;:,<>.?/~';
+  
+    const allChars = uppercaseChars + lowercaseChars + numericChars + specialChars;
+  
+    let password = '';
+    password += getRandomChar(uppercaseChars);
+    password += getRandomChar(numericChars);
+    password += getRandomChar(specialChars);
+  
+    for (let i = 0; i < length - 3; i++) {
+      password += getRandomChar(allChars);
+    }
+  
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+  }
+  
+  function getRandomChar(charSet) {
+    const randomIndex = Math.floor(Math.random() * charSet.length);
+    return charSet[randomIndex];
   }
   
 exports.resetPassword =async (req, res) => {

@@ -22,6 +22,9 @@ cloudinary.config({
     api_key: "541481188898557",
     api_secret: "6ViefK1wxoJP50p8j2pQ7IykIYY"
   });
+const PDFDocument = require('pdfkit');
+
+const path = require('path');
   module.exports.userInfo= async (req,res) =>{
     console.log(req.params);
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
@@ -35,6 +38,9 @@ cloudinary.config({
 
     });
 }
+
+
+
 module.exports.DeleteUser = async (req, res) => {
     const id = req.params.id;
 
@@ -71,36 +77,58 @@ module.exports.DeleteUser = async (req, res) => {
 //send rapport apres la suppression 
 module.exports.sendraport = async (req, res) => {
     const { from, to, subject, text } = req.body;
+  
+    // Set up transporter for sending email to the host
     const smtpHost = 'smtppro.zoho.com';
     const smtpPort = 465;
     const smtpUser = 'Servicedesk@freezepix.com';
     const smtpPass = 'Freezepix2023'; // Please make sure to store sensitive information securely
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: true, // Use SSL
-    auth: {
-      user: smtpUser,
-      pass: smtpPass,
-    },
-  });
-
-  const mailOptions = {
-    from: `"${from}" <${smtpUser}>`, // Include the user's email in the "from" field
-    to: "Servicedesk@freezepix.com",
-    subject,
-    text,
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error(error);
-      res.status(500).json({ error: 'An error occurred while sending the email.' });
-    } else {
-      console.log('Email sent: ' + info.response);
-      res.json({ message: 'Email sent successfully!' });
-    }
-  });
+  
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: true,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+  
+    const mailOptionsToHost = {
+      from: `"${from}" <${smtpUser}>`,
+      to: "Servicedesk@freezepix.com",
+      subject,
+      text,
+    };
+  
+    // Send email to the host
+    transporter.sendMail(mailOptionsToHost, async (error, info) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'An error occurred while sending the email.' });
+      } else {
+        console.log('Email sent to host: ' + info.response);
+  
+        // Assuming the host responds with an email to confirm
+        const mailOptionsFromHost = {
+          from: "Servicedesk@freezepix.com",
+          to: from, // Change this to the user's email (assuming 'from' contains user's email)
+          subject: ' Email de Confirmation',
+          text: 'Vous venez de recevoir un email confirmant la suppression de votre compte.Nous vous souhaitons le meilleur pour la suite',
+        };
+  
+        // Send confirmation email from the host to the user
+        transporter.sendMail(mailOptionsFromHost, (error, info) => {
+          if (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'An error occurred while sending the confirmation email.' });
+          } else {
+            console.log('Confirmation Email sent: ' + info.response);
+            res.json({ message: 'Emails sent successfully!' });
+          }
+        });
+      }
+    });
   };
   module.exports.updateUser= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
@@ -234,6 +262,170 @@ module.exports.updatePseudo = async (req, res) => {
     }
 };
 
+module.exports.updateProfil = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) {
+      return res.status(400).send('ID unknown: ' + req.params.id);
+    }
+  
+    try {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: `Golden/users/profile_photos/${req.params.id}`, // Store images in a folder based on user ID
+      });
+  
+      await UserModel.findByIdAndUpdate(
+        { _id: req.params.id },
+        {
+          $set: {
+            photo: result.secure_url // Store the secure URL of the uploaded image
+          }
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true },
+        (err, data) => {
+          if (!err) return res.send(data);
+          if (err) return res.status(500).send({ message: err });
+        }
+      );
+    } catch (err) {
+      return res.status(500).json({ message: err });
+    }
+  };
+
+//envoyer email pour obtenir le certifcation
+module.exports.sendMailToGetCertification = async (req, res) => {
+    const { from} = req.body;
+    // Set up transporter for sending email to the host
+    const smtpHost = 'smtppro.zoho.com';
+    const smtpPort = 465;
+    const smtpUser = 'Servicedesk@freezepix.com';
+    const smtpPass = 'Freezepix2023'; // Please make sure to store sensitive information securely
+  
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: true, // Use SSL
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  });
+
+  const mailOptions = {
+    from: `"${from}" <${smtpUser}>`, // Include the user's email in the "from" field
+    to: "Servicedesk@freezepix.com",
+    subject:"demande de verification mon certification",
+    text,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error(error);
+      res.status(500).json({ error: 'An error occurred while sending the email.' });
+    } else {
+      console.log('Email sent: ' + info.response);
+      res.json({ message: 'Email sent successfully!' });
+    }
+  });
+};
+const ONE_MONTH = 30 * 24 * 60 * 60 * 1000;
+
+module.exports.recuipererInfoUser = async (req, res) => {
+  console.log(req.params);
+  
+  if (!ObjectID.isValid(req.params.id)) { // Check if the ID is valid
+    return res.status(400).send('ID unknown: ' + req.params.id);
+  }
+
+  userModel.findById(req.params.id, async (err, userData) => {
+    if (!err && userData) {
+      const currentTime = Date.now();
+      const lastEmailSentAt = userData.lastEmailSentAt || 0;
+
+      // Check if a month has passed since the last email
+      if (currentTime - lastEmailSentAt >= ONE_MONTH) {
+        // Update the last email sent timestamp to the current time
+        userData.lastEmailSentAt = currentTime;
+        await userData.save();
+
+        // Sending email
+        const smtpHost = 'smtppro.zoho.com';
+        const smtpPort = 465;
+        const smtpUser = 'Servicedesk@freezepix.com';
+        const smtpPass = 'Freezepix2023'; // Please make sure to store sensitive information securely
+
+        // Set up transporter for sending email to the host (Zoho Mail)
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: smtpPort,
+          secure: true,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass,
+          },
+        });
+
+        const mailOptions = {
+          from: `<${smtpUser}>`,
+          to: userData.email,
+          subject: 'User Information',
+          html: `
+            <h1>User Information</h1>
+            <p><strong>Name:</strong> ${userData.nom}</p>
+            <p><strong>Email:</strong> ${userData.email}</p>
+            <p><strong>Phone Number:</strong> ${userData.numero}</p>
+            <p><strong>Code Parinage:</strong> ${userData.codeParinage}</p>
+            <p><strong>Phone Number:</strong> ${userData.prenom}</p>
+            <p><strong>Code Parinage:</strong> ${userData.dateNass}</p>
+            <!-- Add more user details as needed -->
+          `,
+        };
+
+        try {
+          const info = await transporter.sendMail(mailOptions);
+          console.log('Email sent with user information:', info.response);
+          res.json({ message: 'Email sent successfully with user information!' });
+        } catch (error) {
+          console.error('Error sending email:', error);
+          res.status(500).json({ error: 'Error sending email with user information' });
+        }
+      } else {
+        // If a month hasn't passed, don't send the email
+        res.json({ message: 'Email already sent this month. Not sending again.' });
+      }
+    } else {
+      console.log('Error finding user: ' + err);
+      res.status(500).json({ message: 'Error finding user' });
+    }
+  });
+};
+
+module.exports.updateCouvertir=async (req,res)=>{
+    if (!ObjectID.isValid(req.params.id)) {
+        return res.status(400).send('ID unknown: ' + req.params.id);
+      }
+    
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: `Golden/users/couvertir_images/${req.params.id}`, // Store images in a folder based on user ID
+        });
+    
+        await UserModel.findByIdAndUpdate(
+          { _id: req.params.id },
+          {
+            $set: {
+                couvertir: result.secure_url // Store the secure URL of the uploaded image
+            }
+          },
+          { new: true, upsert: true, setDefaultsOnInsert: true },
+          (err, data) => {
+            if (!err) return res.send(data);
+            if (err) return res.status(500).send({ message: err });
+          }
+        );
+      } catch (err) {
+        return res.status(500).json({ message: err });
+      }
+}
+
 
 
 
@@ -346,63 +538,18 @@ module.exports.unfollow = async (req,res) => {
 
 }
 
-  module.exports.updateProfil = async (req, res) => {
-    if (!ObjectID.isValid(req.params.id)) {
-      return res.status(400).send('ID unknown: ' + req.params.id);
-    }
-  
-    try {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: `Golden/users/profile_photos/${req.params.id}`, // Store images in a folder based on user ID
-      });
-  
-      await UserModel.findByIdAndUpdate(
-        { _id: req.params.id },
-        {
-          $set: {
-            photo: result.secure_url // Store the secure URL of the uploaded image
-          }
-        },
-        { new: true, upsert: true, setDefaultsOnInsert: true },
-        (err, data) => {
-          if (!err) return res.send(data);
-          if (err) return res.status(500).send({ message: err });
-        }
-      );
-    } catch (err) {
-      return res.status(500).json({ message: err });
-    }
-  };
 
 
 
-module.exports.updateCouvertir=async (req,res)=>{
-    if (!ObjectID.isValid(req.params.id)) {
-        return res.status(400).send('ID unknown: ' + req.params.id);
-      }
-    
-      try {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: `Golden/users/couvertir_images/${req.params.id}`, // Store images in a folder based on user ID
-        });
-    
-        await UserModel.findByIdAndUpdate(
-          { _id: req.params.id },
-          {
-            $set: {
-                couvertir: result.secure_url // Store the secure URL of the uploaded image
-            }
-          },
-          { new: true, upsert: true, setDefaultsOnInsert: true },
-          (err, data) => {
-            if (!err) return res.send(data);
-            if (err) return res.status(500).send({ message: err });
-          }
-        );
-      } catch (err) {
-        return res.status(500).json({ message: err });
-      }
-}
+
+
+
+
+
+
+
+
+
 
 
 

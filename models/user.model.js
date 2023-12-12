@@ -111,7 +111,10 @@ const userSchema = new mongoose.Schema(
                   }
             }
         ],
-
+        lastEmailSentAt: {
+            type: Date, // Store the timestamp as a Date
+            default: null // Set default as null or a default timestamp if needed
+          },
         etape1:{
             pseudopro:String,
             siteinternet:String,
