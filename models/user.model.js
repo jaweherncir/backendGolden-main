@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema(
         prenom:{
             type:String
         },
+        verifier:{type:Boolean,default:false},
         nom:{
             type:String
         },
@@ -32,7 +33,10 @@ const userSchema = new mongoose.Schema(
             default: ""
         },
         codeParinage:{type:Number},
-
+        petitRapel:{type:String},
+        PourFinir:{type:String},
+        step1mailSended:{type:Boolean,default:false},
+        bannerCompte:{type:Boolean,default:false},
         photo:{
            type:String,
             ref:"album",

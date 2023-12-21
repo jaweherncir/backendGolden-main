@@ -35,6 +35,15 @@ router.post("/registre",authController.signUp);
 router.put("/signupIdentifiant/:id",authController.updateEtape1)
 //update code parinage ettape2
 router.put("/signupParinage/:id",authController.updateCodeParinage)
+//petit rapell API
+router.put("/petitRapel/:id",authController.PetitRapel)
+router.put("/pourfinir/:id",authController.PourFinir)
+//admin verified step1 of account
+router.put("/verifierStep1/:id",authController.VerifierStep1)
+//compte refuser
+router.put("/compteRefuser/:id",authController.RefuserCompte)
+//baner compte 
+router.put("/compteBanner/:id",authController.BannerCompte)
 //update to add photo profil
 router.put("/addProfilImage/:id",upload.single('profil'),authController.updatePhotoProfil)
 router.put("/signupCouverture/:id",upload.single('couvertir'),authController.updatePhotoCouvertir)

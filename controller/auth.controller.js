@@ -78,6 +78,28 @@ module.exports.signUp = async (req, res) => {
     const { pseudo, nom, prenom, dateNass } = req.body;
   
     try {
+      // Check if the pseudo is 'Couple', 'CPL', or 'Duo' (case-insensitive)
+      const forbiddenPseudos = ['couple', 'cpl', 'duo'];
+      if (forbiddenPseudos.includes(pseudo.toLowerCase())) {
+        return res.status(400).send({ error: "Pseudo 'Couple', 'CPL', or 'Duo' is not allowed." });
+      }
+  
+      // Check if the pseudo length exceeds 11 characters
+      if (pseudo.length > 11) {
+        return res.status(400).send({ error: 'Merci de choisir un Pseudo qui ne contient pas les mentions suivantes: COUPLE, CPL ou DUO.' });
+      }
+  
+      // Check if the pseudo is already used
+      const existingUser = await UserModel.findOne({ pseudo });
+      if (existingUser) {
+        return res.status(400).send({ error: 'Ce pseudo est déjà utilisé, merci d’en choisir un autre.' });
+      }
+
+      // Check if the first name and last name are the same
+      if (nom.toLowerCase() === prenom.toLowerCase()) {
+        return res.status(400).send({ error: 'Merci de choisir un prénom et un nom différents.' });
+      }
+  
       const user = await UserModel.create({ pseudo, nom, prenom, dateNass });
   
       if (user) {
@@ -103,23 +125,31 @@ module.exports.signUp = async (req, res) => {
       res.status(401).send({ errors });
     }
   };
+
+  
+  
 //update etape1 
-module.exports.updateEtape1= async (req,res) =>{
-    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
-        return res.status(400).send('ID unknown : '+ req.params.id);
+module.exports.updateEtape1 = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) // tester si le id est connu de la base de donne
+        return res.status(400).send('ID unknown: ' + req.params.id);
+    
     try {
-        const  salt = await bcrypt.genSalt();
-        const email= req.body.email;
-        const emailverif= await UserModel.findOne({email})
-       // req.bodypassword = await bcrypt.hash(this.password,salt);
-        if(emailverif){
-            res.status(300).json({errors:"email deja exist"})
-        }
-        else {
+        const salt = await bcrypt.genSalt();
+        const email = req.body.email;
+        const emailVerif = await UserModel.findOne({ email });
+        
+        const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[#@]).{16,}$/;
+        const isPasswordValid = passwordRegex.test(req.body.password);
 
-
+        if (emailVerif) {
+            return res.status(300).json({ errors: "Email already exists." });
+        } else if (!isPasswordValid) {
+            return res.status(400).json({
+                errors: "Le mot de passe doit compter 16 caractères minimum avec au moins une majuscule, 1 chiffre et un caractère spécial (#, @)."
+            });
+        } else {
             await UserModel.findByIdAndUpdate(
-                {_id: req.params.id},
+                { _id: req.params.id },
                 {
                     $set: {
                         email: req.body.email,
@@ -127,20 +157,18 @@ module.exports.updateEtape1= async (req,res) =>{
                         password: await bcrypt.hash(req.body.password, salt)
                     }
                 },
-                {new: true, upsert: true, setDefaultsOnInsert: true},
+                { new: true, upsert: true, setDefaultsOnInsert: true },
                 (err, data) => {
                     if (!err) return res.send(data);
-                    if (err) return res.status(500).send({message: err});
+                    if (err) return res.status(500).send({ message: err });
                 }
-            )
+            );
         }
-    }catch(err) {
-
-        return res.status(500).json({message: err});
+    } catch (err) {
+        return res.status(500).json({ message: err });
     }
+};
 
-
-} 
 //update code parinage 
 module.exports.updateCodeParinage= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
@@ -166,6 +194,239 @@ module.exports.updateCodeParinage= async (req,res) =>{
     }
 
 }
+//petit rapelle
+module.exports.PetitRapel= async (req,res) =>{
+    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
+        return res.status(400).send('ID unknown : '+ req.params.id);
+    try {
+        await UserModel.findByIdAndUpdate(
+            {_id:req.params.id},
+            {
+                $set: {
+                    petitRapel: req.body.petitRapel,
+
+                }
+            },
+            {new: true, upsert: true, setDefaultsOnInsert:true},
+            (err,data) =>{
+                if (!err) return res.send(data);
+                if (err) return  res.status(500).send({message: err});
+            }
+        )
+    }catch(err) {
+
+        return res.status(500).json({message: err});
+    }
+
+}
+//last step Inscription step 1
+module.exports.PourFinir = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) {
+        return res.status(400).send('ID unknown: ' + req.params.id);
+    }
+
+    try {
+        const user = await UserModel.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            req.params.id,
+            { $set: { PourFinir: req.body.PourFinir ,step1mailSended:true} },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+        if (user.verifier) {//If 'verifier' is already true, send a message indicating the account is verified
+        return res.status(200).send({message:'Vous possédez déjà un compte actif au sein de notre plateforme.Le doublon de compte sur Golden Indigo est interdit'});
+ }
+        const smtpHost = 'smtppro.zoho.com';
+        const smtpPort = 465;
+        const smtpUser = 'Servicedesk@freezepix.com';
+        const smtpPass = 'Freezepix2023'; // Please make sure to store sensitive information securely
+
+        // Sending verification email logic
+        const smtpTransport = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: true, // Use SSL
+            auth: {
+                user: smtpUser,
+                pass: smtpPass,
+            },
+        });
+
+        const userEmail = user.email;
+
+        const mailOptions = {
+            from: `${userEmail} <${smtpUser}>`, // Set sender as user's email
+            to: 'Servicedesk@freezepix.com',
+            subject: 'Account Verification',
+            text: `User ${user.nom} needs to verify their account to complete the second part of the inscription under email ${user.email}.`
+        };
+
+        smtpTransport.sendMail(mailOptions, (error, response) => {
+            if (error) {
+                console.error(error);
+                smtpTransport.close();
+                return res.status(500).send({ message: 'Failed to send verification Account.' });
+            } else {
+                console.log('Verification Account sent successfully!');
+                smtpTransport.close();
+                return res.send(updatedUser);
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+//admin valide le step 1
+module.exports.VerifierStep1 = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) // Check if the ID is valid
+        return res.status(400).send('ID unknown: ' + req.params.id);
+
+    try {
+        const user = await UserModel.findById(req.params.id); // Find the user by ID
+
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        const smtpHost = 'smtppro.zoho.com';
+        const smtpPort = 465;
+        const smtpUser = 'Servicedesk@freezepix.com';
+        const smtpPass = 'Freezepix2023'; // Please make sure to store sensitive information securely
+
+        // Sending verification email logic
+        const smtpTransport = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: true, // Use SSL
+            auth: {
+                user: smtpUser,
+                pass: smtpPass,
+            },
+        });
+
+        if (!user.verifier) {
+            // If 'verifier' is not true, update it to true and send an email to the user
+            await UserModel.findByIdAndUpdate(
+                { _id: req.params.id },
+                {
+                    $set: {
+                        verifier: true
+                    }
+                },
+                { new: true, upsert: true, setDefaultsOnInsert: true },
+                async (err, data) => {
+                    if (!err) {
+                        // Sending email to the user
+                        const mailOptions = {
+                            from: 'Servicedesk@freezepix.com', // Sender address
+                            to: user.email, // Receiver's email
+                            subject: 'Account Verification',
+                            html: `Bonjour ${user.prenom},</br>
+                            Merci de l'intérêt porté à notre égard. Vous êtes bien enregistré. Si vous le désirez, vous pouvez finaliser votre inscription afin de devenir officiellement membre.</br></br>
+                            Cordialement,</br>
+                            L'équipe du Golden Indigo. <a href="https://yourverificationlink.com" style="display: inline-block; padding: 10px 20px; background-color: #BE7C00; color: #fff; text-decoration: none; border-radius: 5px;">FINALISER MON INSCRIPTION</a>`
+                        };
+
+                        try {
+                            await smtpTransport.sendMail(mailOptions);
+                            return res.send({ message: 'Nous vous avons envoyé un mail. Merci de cliquer sur le lien intégré pour finaliser votre pré-inscription.' });
+                        } catch (error) {
+                            return res.status(500).send({ message: error });
+                        }
+                    }
+                    return res.status(500).send({ message: err });
+                }
+            );
+        } else {
+            return res.status(200).send('Echec');
+        }
+    } catch (err) {
+        return res.status(500).json({ message: err });
+    }
+};
+//admin refuse le compte 
+module.exports.RefuserCompte = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) // Check if the ID is valid
+        return res.status(400).send('ID unknown: ' + req.params.id);
+
+    try {
+        const currentDate = new Date().toLocaleDateString(); // Get current date in format xx/xx/xxxx
+
+        await UserModel.findByIdAndUpdate(
+            { _id: req.params.id },
+            {
+                $set: {
+                    verifier: false,
+                }
+            },
+            { new: true, upsert: true, setDefaultsOnInsert: true },
+            (err, data) => {
+                if (!err) {
+                    return res.send({
+                        message: `Votre inscription a été refusée le ${currentDate}. Rendez-vous dans un an pour retenter votre chance, qui sait…`
+                    });
+                }
+                return res.status(500).send({ message: err });
+            }
+        );
+    } catch (err) {
+        return res.status(500).json({ message: err });
+    }
+};
+
+//admin banner le compte admin 
+
+module.exports.BannerCompte = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) // Check if the ID is valid
+        return res.status(400).send('ID unknown: ' + req.params.id);
+
+    try {
+        const currentDate = new Date().toLocaleDateString(); // Get current date in format xx/xx/xxxx
+
+        await UserModel.findByIdAndUpdate(
+            { _id: req.params.id },
+            {
+                $set: {
+                    bannerCompte: true,
+                }
+            },
+            { new: true, upsert: true, setDefaultsOnInsert: true },
+            (err, data) => {
+                if (!err) {
+                    return res.send({
+                        message: `Votre compte à été banni !Aucun retour en arrière possible.Vous ne pouvez plus ouvrir d’autre compte.`
+                    });
+                }
+                return res.status(500).send({ message: err });
+            }
+        );
+    } catch (err) {
+        return res.status(500).json({ message: err });
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 module.exports.updatePhotoProfil = async (req, res) => {
     if (!ObjectID.isValid(req.params.id)) {
         return res.status(400).send('ID unknown: ' + req.params.id);
