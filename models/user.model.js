@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema(
             type:String
         },
         dateNass:Date,
+        age:Number,
         email: {
             type: String,
               lowercase: true,
