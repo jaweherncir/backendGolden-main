@@ -14,6 +14,7 @@ const RencontreModel= require("../models/Rencontre.model");
 const nodemailer = require("nodemailer");
 const fs = require("fs")
 const cloudinary = require('cloudinary').v2;
+const moment = require('moment');
 cloudinary.config({
     cloud_name: "dm0c8st6k",
     api_key: "541481188898557",
@@ -99,8 +100,13 @@ module.exports.signUp = async (req, res) => {
       if (nom.toLowerCase() === prenom.toLowerCase()) {
         return res.status(400).send({ error: 'Merci de choisir un prénom et un nom différents.' });
       }
-  
-      const user = await UserModel.create({ pseudo, nom, prenom, dateNass });
+      const birthDate = moment(dateNass);
+      const today = moment();
+      const age = today.diff(birthDate, 'years');
+      if (age < 18) {
+        return res.status(400).send({ error: 'Votre âge doit être supérieur ou égal à 18 ans pour vous inscrire.' });
+    }
+      const user = await UserModel.create({ pseudo, nom, prenom, dateNass,age });
   
       if (user) {
         // Create and sign a token
