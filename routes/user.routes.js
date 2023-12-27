@@ -60,7 +60,7 @@ router.put("/signupMusique/:id",authController.musique)
 router.put("/signupCaractere/:id",authController.caractere)
 router.put("/signupPersonalite/:id",authController.personalite)
 router.put("/signupShiloutte/:id",authController.sihloutte)
-router.put("/signupCertificat/:id",uploadcertif.array('certificat',2),authController.certificat)
+router.put("/signupCertificat/:id",uploadcertif.array('certificat',2),authController.certificatPlus)
 //questianire
 router.put("/etape1/:id",authController.Etape1)
 router.put("/etape2/:id",authController.Etape2)

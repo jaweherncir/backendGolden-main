@@ -26,55 +26,7 @@ const createToken = (id) =>{
     })
 }
 
-
-/*
-module.exports.signUp= async (req,res) =>{
-    const  {
-        pseudo,email,password,nomfamille,prenom,nom,datenass,pays,
-        ville,numero,langueCourant,langueSecondaire,
-        profession,silhoutte,orgineethnique,nature,orientationsexe,preferences,
-        valeurscroyances,typerelation,votrecaractere,temperament,interet,
-    }=req.body
-    const photo=req.files.photo[0].filename
-    const couvertir=req.files.couvertir[0].filename
-
-    try {
-        const user = await  UserModel.create({pseudo,email,password,nomfamille,prenom,nom,
-            datenass,pays,ville,numero,langueCourant,langueSecondaire,
-            profession,silhoutte,orgineethnique,nature,orientationsexe,preferences,
-            valeurscroyances,typerelation,votrecaractere,temperament,interet,photo,couvertir
-        });
-
-        if (user)
-        {
-            const newInvitModel = new InvitationModel(
-                {
-                    userID:user._id
-                }
-            );
-            const newNotificationsModel= new NotificationsModel(
-                {
-                    userID:user._id
-                }
-
-            );
-            await newInvitModel.save();
-            await newNotificationsModel.save();
-            res.status(201).json({user: user._id});
-
-        }
-
-
-    }
-    catch (err){
-        const errors = singUpErrors(err);
-        res.status(200).send({errors});
-
-       // console.log(err);
-    }
-
-}
-*/
+//STEP  1 INSCRIPTION
 module.exports.signUp = async (req, res) => {
     const { pseudo, nom, prenom, dateNass } = req.body;
   
@@ -132,8 +84,6 @@ module.exports.signUp = async (req, res) => {
     }
   };
 
-  
-  
 //update etape1 
 module.exports.updateEtape1 = async (req, res) => {
     if (!ObjectID.isValid(req.params.id)) // tester si le id est connu de la base de donne
@@ -349,7 +299,7 @@ module.exports.VerifierStep1 = async (req, res) => {
                 }
             );
         } else {
-            return res.status(200).send('Echec');
+            return res.status(200).send({message:'Nous vous avons envoyé un mail. Merci de cliquer sur le lien intégré pour finaliser votre pré-inscription.'});
         }
     } catch (err) {
         return res.status(500).json({ message: err });
@@ -367,7 +317,7 @@ module.exports.RefuserCompte = async (req, res) => {
             { _id: req.params.id },
             {
                 $set: {
-                    verifier: false,
+                    compteRefuser: true,
                 }
             },
             { new: true, upsert: true, setDefaultsOnInsert: true },
@@ -415,24 +365,7 @@ module.exports.BannerCompte = async (req, res) => {
         return res.status(500).json({ message: err });
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//STEP 2 INSCRIPTION
 module.exports.updatePhotoProfil = async (req, res) => {
     if (!ObjectID.isValid(req.params.id)) {
         return res.status(400).send('ID unknown: ' + req.params.id);
@@ -472,6 +405,7 @@ module.exports.updatePhotoProfil = async (req, res) => {
         return res.status(500).json({ message: err });
     }
 };
+
 module.exports.updatePhotoCouvertir= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id)) {
         return res.status(400).send('ID unknown: ' + req.params.id);
@@ -520,6 +454,16 @@ module.exports.updatePhotoCouvertir= async (req,res) =>{
       
    
    }
+//add certifcat
+
+
+
+
+
+
+
+
+
 //add genre
  module.exports.updateGenre= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
@@ -841,7 +785,7 @@ module.exports.sihloutte= async (req,res) =>{
 
 
 }
-module.exports.certificat = async (req, res) => {
+module.exports.certificatPlus = async (req, res) => {
     if (!ObjectID.isValid(req.params.id)) {
         return res.status(400).send('ID unknown: ' + req.params.id);
     }

@@ -38,10 +38,12 @@ const userSchema = new mongoose.Schema(
         PourFinir:{type:String},
         step1mailSended:{type:Boolean,default:false},
         bannerCompte:{type:Boolean,default:false},
+        compteRefuser:{type:Boolean,default:false},
+    
         photo:{
            type:String,
             ref:"album",
-            default: Date.now  // Adding default value as Date.now
+            default: ""// Adding default value as Date.now
 
         },
 
