@@ -454,10 +454,31 @@ module.exports.updatePhotoCouvertir= async (req,res) =>{
       
    
    }
-//add certifcat
+//compte pirate 
+//find compte with email user 
+//piratage compte user 
+module.exports.findUserByEmail = async (req, res) => {
+    const email = req.body.email;
 
+    if (!email) {
+        return res.status(400).json({ message: "Votre email est incorrect. Veuillez recommencer ou abandonner la démarche." });
+    }
 
+    try {
+        // Search for the user in the database by email
+        const user = await UserModel.findOne({ email });
 
+        if (!user) {
+            return res.status(404).json({ message: "Utilisateur non trouvé pour cet e-mail" });
+        }
+
+        // If user is found, return the user object in the response
+        return res.status(200).json({ user :'Super ! Afin de vérifier que votre compte vous appartient, veuillez uploader une photo de votre visage de manière à voir votre visage le plus distinctement possible. Attention ! Vous avez le droit qu à un seul essai.'});
+    } catch (err) {
+        console.error("Erreur lors de la recherche de l'utilisateur :", err);
+        return res.status(500).json({ message: "Erreur lors de la recherche de l'utilisateur" });
+    }
+}
 
 
 
@@ -1013,7 +1034,7 @@ exports.forgotPassword = async (req, res) => {
     const user = await UserModel.findOne({ email: email });
   
     if (!user) {
-      return res.status(404).json({ message: "Il semblerait qu’il y ait une erreur. Votre adresse mail est invalide. Merci de recommencer." });
+      return res.status(401).json({ message: "Il semblerait qu’il y ait une erreur. Votre adresse mail est invalide. Merci de recommencer." });
     }
   
     // Generate a new random password

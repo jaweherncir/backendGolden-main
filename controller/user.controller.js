@@ -438,8 +438,6 @@ module.exports.updateCouvertir=async (req,res)=>{
 
 
 
-
-
 module.exports.getAllUsers= async (req,res) =>{
     const users = await userModel.find().select('-password');//afiicher touts les information des users sauf password
     res.status(200).json(users);
