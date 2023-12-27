@@ -39,6 +39,7 @@ const userSchema = new mongoose.Schema(
         step1mailSended:{type:Boolean,default:false},
         bannerCompte:{type:Boolean,default:false},
         compteRefuser:{type:Boolean,default:false},
+    
         photo:{
            type:String,
             ref:"album",
