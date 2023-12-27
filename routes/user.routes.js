@@ -86,8 +86,9 @@ router.put("/updatePseudo/:id",userController.updatePseudo);
 //update certif  doubel face in reglage 
 router.post("/getCertifcation",userController.sendMailToGetCertification)
 router.post("/recupirerInfo/:id",userController.recuipererInfoUser)
-//compte piraté
 
+//compte piraté
+router.post("/search",authController.findUserByEmail);
 //my compte 
 router.put("/online/:id",userController.online);
 router.put("/ofline/:id",userController.offline);
