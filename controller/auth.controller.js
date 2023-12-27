@@ -456,6 +456,7 @@ module.exports.updatePhotoCouvertir= async (req,res) =>{
    }
 //compte pirate 
 //find compte with email user 
+//piratage compte user 
 module.exports.findUserByEmail = async (req, res) => {
     const email = req.body.email;
 
