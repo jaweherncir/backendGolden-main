@@ -445,6 +445,9 @@ module.exports.getAllUsers= async (req,res) =>{
     res.status(200).json(users);
 
 }
+
+
+
 module.exports.getAllUseerBlock= async (req,res) =>{
     const users = await userModel.find().select('blocked')
         .populate({path:'blocked',select:['nom','prenom','email','genre','numero','villeconnue','dateNass']});//afiicher touts les information des users sauf password
