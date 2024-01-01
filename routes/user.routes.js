@@ -89,6 +89,33 @@ router.post("/recupirerInfo/:id",userController.recuipererInfoUser)
 
 //compte piraté
 router.post("/search",authController.findUserByEmail);
+
+//profil user solo 
+router.get("/info/:id",userController.userInfoPArtieinformation);
+router.put("/prologue/:id",userController.updateUserPrologue)
+router.put("/infogenerales/:id",userController.updateUserInfoGenerales)
+router.put("/localisation/:id",userController.updateUserLocalaisation)
+router.put("/valeur/:id",userController.updateUserValeurRecherches)
+router.put("/apparence/:id",userController.updateUserApparance)
+router.put("/detailsphysique/:id",userController.updateUserDetailsPhysique)
+router.put("/personalite/:id",userController.updateUserPersonalite)
+router.put("/habitudes/:id",userController.updateUserhabitudes)
+//partie profil solo bannier
+router.put("/upload-couverture/:id",upload.single('couvertir'),userController.updateNouvellePhotoCouvertir)
+router.put("/couverture/:id",userController.updatePhotoCouvertirFromGaleery)
+
+
+//viste profil user 
+router.get("/search/:id",userController.SearchProfilSolo);
+router.patch("/blocked/:id",userController.BlockerUser);
+router.patch("/retirer/:id",userController.RetirerUser);
+router.patch("/acceptcontact/:id",userController.acceptfriend);
+router.get("/info/contact/:id",userController.userInfoContact);
+router.get("/info/contact-bloque/:id",userController.userInfoBlocked);
+//Contact & Affichage
+//debloquer user 
+router.patch("/info/contact-Debloque/:id",userController.userInfoDebocked);
+
 //my compte 
 router.put("/online/:id",userController.online);
 router.put("/ofline/:id",userController.offline);
@@ -112,35 +139,25 @@ router.patch("/:id",userController.follow);// id de user qui deja connecter
 router.patch("/unfollow/:id",userController.unfollow);
  
 
-router.patch("/blocked/:id",userController.BlockerUser);
-router.patch("/retirer/:id",userController.RetirerUser);
 
-router.patch("/acceptcontact/:id",userController.acceptfriend);
 
 //upload
 router.put("/update_profil_image/:id",upload.single('profil'),userController.updateProfil)
 router.put("/update_couvertir_image/:id",upload.single('couvertir'),userController.updateCouvertir)
-router.put("/prologue/:id",userController.updateUserPrologue)
-router.put("/infogenerales/:id",userController.updateUserInfoGenerales)
-router.put("/localisation/:id",userController.updateUserLocalaisation)
-router.put("/valeur/:id",userController.updateUserValeurRecherches)
-router.put("/apparence/:id",userController.updateUserApparance)
-router.put("/detailsphysique/:id",userController.updateUserDetailsPhysique)
-router.put("/personalite/:id",userController.updateUserPersonalite)
-router.put("/habitudes/:id",userController.updateUserhabitudes)
-router.put("/upload-couverture/:id",upload.single('couvertir'),userController.updateNouvellePhotoCouvertir)
-router.put("/couverture/:id",userController.updatePhotoCouvertirFromGaleery)
+
+
+
 
 router.get("/album/:id",userController.getALLAlbumByUserID)
 router.get("/album/public/:id",getALLGalleryPublicByUSER)
 router.get("/album/prive/:id",getALLGalleryPriveByUSER)
 router.get("/profil/:id",userController.userInfoPArtieProfil);
-router.get("/info/:id",userController.userInfoPArtieinformation);
-router.get("/info/contact/:id",userController.userInfoContact);
-router.get("/info/contact-bloque/:id",userController.userInfoBlocked);
 
 
-router.get("/search/:id",userController.SearchProfilSolo);
+
+
+
+
 
 
 
