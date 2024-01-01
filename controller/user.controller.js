@@ -426,18 +426,252 @@ module.exports.updateCouvertir=async (req,res)=>{
       }
 }
 
+// recherche profil solo 
+module.exports.SearchProfilSolo= async (req,res) =>{
+    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
+        return res.status(400).send('ID unknown : '+ req.params.id);
+    try {
+        await userModel.find(
+            {pseudo: { $regex: req.body.pseudo } },
+            (err,profil) =>{
+                if (!err) return res.send(profil);
+                if (err) return  res.status(500).send({message: err});
+            }
+        ).select("-password")
+    }catch(err) {
+
+        return res.status(500).json({message: err});
+    }
+
+}
+module.exports.acceptfriend= async (req,res)=>{
+    if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.usersender) )
+        return res.status(400).send('ID unknown '+req.params.id);
+    try {
+        // add to the follower liste
+            await InvitationMedel.findOneAndUpdate({
+                "userID":req.params.id
+            },{
+                $pull:{reciverReqFreinds:{_id:req.body.usersender}}
+            },{
+                new: true, upsert: true
+            });
+           let userinvitsender =  await InvitationMedel.findOneAndUpdate({
+                "userID":req.body.usersender
+            },{
+                $pull:{senderReqFreinds:{_id:req.params.id}}
+            },{
+                new: true, upsert: true
+            });
+        //add to following liste
+        // 9owet el request patch est non put
+        await userModel.findByIdAndUpdate(
+            {_id: req.body.usersender},
+            {$addToSet : {friends : req.params.id}},
+            {new: true, upsert:true}
+
+        ),
+            await userModel.findByIdAndUpdate(
+            {_id: req.params.id},//id d personne qui faire labonne
+            {
+                $addToSet : {friends: req.body.usersender}
+            },
+            {new: true, upsert:true}
+            );
+        await NotificationModel.findOneAndUpdate({
+            "userID":req.params.id
+        },{
+            $pull:{Interaction:{_id:req.body.idnotif}}
+        },{
+            new: true, upsert: true
+        }),
+            await NotificationModel.findOneAndUpdate({
+                "userID":req.body.usersender
+            },{
+                $addToSet:{Interaction:{
+                        usersenderid:req.params.id,
+                        timestamp:new Date().getTime(),
+                        model:"contact",
+                        text:"Vous êtes maintenant en contact avec"
+                    }}
+            },{
+                new: true, upsert: true
+            },(err,rep)=>{
+                if (err)
+                    return res.status(400).json(err);
+                else{
+                    //console.log(rep.Interaction[rep.Interaction.length -1]._id)
+                    console.log(req.body.usersender)
+                    return res.status(200).send({ivitation:userinvitsender,notif:rep.Interaction[rep.Interaction.length -1]})
+                    //return res.status(201).json(rep.Interaction[rep.Interaction.length -1]);
+                }
+
+            })
+
+
+    }catch (err){
+        return res.status(500).json({message: err});
+
+    }
+
+}
+module.exports.BlockerUser=async (req,res)=>{
+    if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.user) )
+        return res.status(400).send('ID unknown '+req.params.id);
+    try {
+
+        // add to the follower liste
+        await UserModel.findByIdAndUpdate(
+            {_id:req.params.id}
+        ,{
+            $pull:{friends:req.body.user}
+        },{
+            new: true, upsert: true
+        }),
+
+            await UserModel.findByIdAndUpdate({
+                _id:req.body.user
+            },{
+                $pull:{friends:req.params.id}
+            },{
+                new: true, upsert: true
+            }),
+            await UserModel.findByIdAndUpdate({
+                _id:req.params.id
+            },{
+                $addToSet:{blocked:req.body.user}
+            },{
+                new: true, upsert: true
+            },(err,reponse)=>{
+                if(!err)
+                    res.status(201).send(reponse);
+                else
+                    res.status(401).send(err);
+            });
+
+    }catch (err){
+        return res.status(500).json({message: err});
+
+    }
+
+}
+module.exports.RetirerUser=async (req,res)=>{
+    if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.user) )
+        return res.status(400).send('ID unknown '+req.params.id);
+    try {
+
+        // add to the follower liste
+        await UserModel.findByIdAndUpdate(
+            {_id:req.params.id}
+            ,{
+                $pull:{friends:req.body.user}
+            },{
+                new: true, upsert: true
+            }),
+
+            await UserModel.findByIdAndUpdate({
+                _id:req.body.user
+            },{
+                $pull:{friends:req.params.id}
+            },{
+                new: true, upsert: true
+            }),
+            await UserModel.findByIdAndUpdate({
+                _id:req.params.id
+            },{
+                $addToSet:{retirer:req.body.user}
+            },{
+                new: true, upsert: true
+            },(err,reponse)=>{
+                if(!err)
+                    res.status(201).send(reponse);
+                else
+                    res.status(401).send(err);
+            });
+
+    }catch (err){
+        return res.status(500).json({message: err});
+
+    }
+
+}
+module.exports.userInfoContact = async (req, res) => {
+   
+    if (!ObjectID.isValid(req.params.id)) {
+        return res.status(400).send("ID unknown: " + req.params.id);
+    }
+
+    try {
+        const user = await UserModel.findById(req.params.id)
+            .populate ({
+                path: 'friends',
+                select: ['pseudo', 'photo', 'dateNass', 'genre'],
+                populate: {
+                    path: 'photo',
+                    select: 'picture'
+                }
+            })
+            .select('friends');
+
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+
+        res.send(user.friends);
+    } catch (err) {
+        console.error("Error fetching user's friends:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+module.exports.userInfoBlocked = async (req, res) => {
+    try {
+        // Get the current user's ID or any identifier to fetch their blocked users list
+        const userId = req.params.id; // Replace this with your authentication method to get the user ID
+    
+        // Fetch the user by ID
+        const user = await UserModel.findById(userId).populate('blocked', 'pseudo'); // Populate 'blocked' field with 'pseudo'
+    
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+    
+        // Access the list of blocked users
+        const blockedUsers = user.blocked;
+    
+        res.status(200).json({ blockedUsers });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+};
+module.exports.userInfoDebocked = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.user))
+        return res.status(400).send('ID unknown ' + req.params.id);
+
+    try {
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            req.params.id,
+            {
+                $pull: { blocked: req.body.user } // Removing the user from the blocked array
+            },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).send('User not found');
+        }
+
+        res.status(200).send(updatedUser);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
 
 
 
 
+  
 
-
-
-
-
-
-
-
+//api admin 
 module.exports.getAllUsers= async (req,res) =>{
     const users = await userModel.find().select('-password');//afiicher touts les information des users sauf password
     res.status(200).json(users);
@@ -707,77 +941,11 @@ async function suprimernotifsContact(idbody,idparams){
     );
 
 }
-module.exports.acceptfriend= async (req,res)=>{
-    if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.usersender) )
-        return res.status(400).send('ID unknown '+req.params.id);
-    try {
-        // add to the follower liste
-            await InvitationMedel.findOneAndUpdate({
-                "userID":req.params.id
-            },{
-                $pull:{reciverReqFreinds:{_id:req.body.usersender}}
-            },{
-                new: true, upsert: true
-            });
-           let userinvitsender =  await InvitationMedel.findOneAndUpdate({
-                "userID":req.body.usersender
-            },{
-                $pull:{senderReqFreinds:{_id:req.params.id}}
-            },{
-                new: true, upsert: true
-            });
-        //add to following liste
-        // 9owet el request patch est non put
-        await userModel.findByIdAndUpdate(
-            {_id: req.body.usersender},
-            {$addToSet : {friends : req.params.id}},
-            {new: true, upsert:true}
-
-        ),
-            await userModel.findByIdAndUpdate(
-            {_id: req.params.id},//id d personne qui faire labonne
-            {
-                $addToSet : {friends: req.body.usersender}
-            },
-            {new: true, upsert:true}
-            );
-        await NotificationModel.findOneAndUpdate({
-            "userID":req.params.id
-        },{
-            $pull:{Interaction:{_id:req.body.idnotif}}
-        },{
-            new: true, upsert: true
-        }),
-            await NotificationModel.findOneAndUpdate({
-                "userID":req.body.usersender
-            },{
-                $addToSet:{Interaction:{
-                        usersenderid:req.params.id,
-                        timestamp:new Date().getTime(),
-                        model:"contact",
-                        text:"Vous êtes maintenant en contact avec"
-                    }}
-            },{
-                new: true, upsert: true
-            },(err,rep)=>{
-                if (err)
-                    return res.status(400).json(err);
-                else{
-                    //console.log(rep.Interaction[rep.Interaction.length -1]._id)
-                    console.log(req.body.usersender)
-                    return res.status(200).send({ivitation:userinvitsender,notif:rep.Interaction[rep.Interaction.length -1]})
-                    //return res.status(201).json(rep.Interaction[rep.Interaction.length -1]);
-                }
-
-            })
 
 
-    }catch (err){
-        return res.status(500).json({message: err});
 
-    }
 
-}
+
 module.exports.updateUserPrologue= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
         return res.status(400).send('ID unknown : '+ req.params.id);
@@ -993,6 +1161,7 @@ module.exports.updateUserhabitudes= async (req,res) =>{
     }
 
 }
+
 module.exports.getAllUSerHOmme= async (req,res) =>{
     try {
         var array_genre = ["HOMME"];
@@ -1176,60 +1345,9 @@ module.exports.userInfoPArtieinformation = async (req, res) => {
 
 
 };
-module.exports.userInfoContact = async (req, res) => {
-    if (!ObjectID.isValid(req.params.id))
-        return res.status(400).send("ID unknown : " + req.params.id);
 
-    await userModel.findById(req.params.id, (err, docs) => {
-        if (!err) {
-            res.send(docs.friends);
-        }
-        else console.log("ID unknown : " + err);
-    })
-        .populate({path:'friends',select:['pseudo','photo','dateNass','genre'],
-            populate: {
-                path: 'photo',
-                select:'picture'
-            }})
-        .select('friends')
 
-};
-module.exports.userInfoBlocked = async (req, res) => {
-    if (!ObjectID.isValid(req.params.id))
-        return res.status(400).send("ID unknown : " + req.params.id);
 
-    await userModel.findById(req.params.id, (err, docs) => {
-        if (!err) {
-            res.send(docs.blocked);
-        }
-        else console.log("ID unknown : " + err);
-    })
-        .populate({path:'blocked',select:['pseudo','photo','dateNass','genre'],
-            populate: {
-                path: 'photo',
-                select:'picture'
-            }})
-        .select('blocked')
-
-};
-
-module.exports.SearchProfilSolo= async (req,res) =>{
-    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
-        return res.status(400).send('ID unknown : '+ req.params.id);
-    try {
-        await userModel.find(
-            {pseudo: { $regex: req.body.pseudo } },
-            (err,profil) =>{
-                if (!err) return res.send(profil);
-                if (err) return  res.status(500).send({message: err});
-            }
-        ).select("_id photo pseudo genre")
-    }catch(err) {
-
-        return res.status(500).json({message: err});
-    }
-
-}
 module.exports.SearchPseduo= async (req,res) =>{
     const listpseudo=[];
         await userModel.find((err,pseudo)=>{
@@ -1352,86 +1470,6 @@ module.exports.getALLGalleryPriveByUSER=async (req,res)=>{
             //console.log('ID unknow : '+err);
 
         });
-}
-module.exports.BlockerUser=async (req,res)=>{
-    if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.user) )
-        return res.status(400).send('ID unknown '+req.params.id);
-    try {
-
-        // add to the follower liste
-        await UserModel.findByIdAndUpdate(
-            {_id:req.params.id}
-        ,{
-            $pull:{friends:req.body.user}
-        },{
-            new: true, upsert: true
-        }),
-
-            await UserModel.findByIdAndUpdate({
-                _id:req.body.user
-            },{
-                $pull:{friends:req.params.id}
-            },{
-                new: true, upsert: true
-            }),
-            await UserModel.findByIdAndUpdate({
-                _id:req.params.id
-            },{
-                $addToSet:{blocked:req.body.user}
-            },{
-                new: true, upsert: true
-            },(err,reponse)=>{
-                if(!err)
-                    res.status(201).send(reponse);
-                else
-                    res.status(401).send(err);
-            });
-
-    }catch (err){
-        return res.status(500).json({message: err});
-
-    }
-
-}
-module.exports.RetirerUser=async (req,res)=>{
-    if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.user) )
-        return res.status(400).send('ID unknown '+req.params.id);
-    try {
-
-        // add to the follower liste
-        await UserModel.findByIdAndUpdate(
-            {_id:req.params.id}
-            ,{
-                $pull:{friends:req.body.user}
-            },{
-                new: true, upsert: true
-            }),
-
-            await UserModel.findByIdAndUpdate({
-                _id:req.body.user
-            },{
-                $pull:{friends:req.params.id}
-            },{
-                new: true, upsert: true
-            }),
-            await UserModel.findByIdAndUpdate({
-                _id:req.params.id
-            },{
-                $addToSet:{retirer:req.body.user}
-            },{
-                new: true, upsert: true
-            },(err,reponse)=>{
-                if(!err)
-                    res.status(201).send(reponse);
-                else
-                    res.status(401).send(err);
-            });
-
-    }catch (err){
-        return res.status(500).json({message: err});
-
-    }
-
 }
 
 

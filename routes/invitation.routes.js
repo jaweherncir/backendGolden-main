@@ -12,7 +12,7 @@ router.patch('/anuller-jumlage/:id',invitationController.AnnulerDemandeJumlage);
 router.get('/');
 //invitation demande coupcoeur
 router.patch('/invit-coupcoueur/:id',invitationController.invitationCoupCoueur);
-//refuse demnde coupcoeur
+//invite user
 router.patch('/invit-contact/:id',invitationController.InvitationContact);
 router.patch('/annuler-contact/:id',invitationController.AnnulerInvitationContact);
 router.patch('/refuse-contact/:id',invitationController.RefuseInvitationContact);
@@ -22,4 +22,4 @@ router.patch('/invit-album/:id',invitationController.InvitationAlbum);
 
 
 
-module.exports=router;
+module.exports=router; 

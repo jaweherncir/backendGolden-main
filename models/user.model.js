@@ -69,6 +69,7 @@ const userSchema = new mongoose.Schema(
         orgine:{
             type:[String]
         },
+       
         signeastrologique:{type:[String]},
         ascendant:{type:[String]},
         domainepro:{type:[String]},
@@ -160,7 +161,8 @@ const userSchema = new mongoose.Schema(
         },
         friends:{
             type:[ObjectID],
-            ref:"user"
+            ref:"user",
+            default:true
 
         },
         blocked:{
