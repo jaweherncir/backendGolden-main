@@ -115,7 +115,9 @@ router.get("/info/contact-bloque/:id",userController.userInfoBlocked);
 //Contact & Affichage
 //debloquer user 
 router.patch("/info/contact-Debloque/:id",userController.userInfoDebocked);
-
+//get liste user bloced 
+router.get("/alluserblock",userController.getAllUseerBlock);
+router.patch("/signalercompte/:id",userController.signaleCompte);
 //my compte 
 router.put("/online/:id",userController.online);
 router.put("/ofline/:id",userController.offline);
@@ -167,7 +169,7 @@ router.get("/profil/:id",userController.userInfoPArtieProfil);
 //user display block
 router.get("/",userController.getAllUsers);
 router.get("/allusercount",userController.getAllCountUsers);
-router.get("/alluserblock",userController.getAllUseerBlock);
+
 router.get("/homme",userController.getAllUSerHOmme);
 router.get("/allpseudo",userController.SearchPseduo);
 
