@@ -118,6 +118,12 @@ router.patch("/info/contact-Debloque/:id",userController.userInfoDebocked);
 //get liste user bloced 
 router.get("/alluserblock",userController.getAllUseerBlock);
 router.patch("/signalercompte/:id",userController.signaleCompte);
+//choisir nombres des lettre a achéter
+router.patch('/nbrelettre/:id',userController.nbLettreAcheter);
+//liste friends of user 
+router.get('/listeFriend/:id',userController.getUserFriends);
+//visiblité liste friends 
+router.put('/VisiblitelisteFriend/:id',userController.updateFriendVisibility);
 //my compte 
 router.put("/online/:id",userController.online);
 router.put("/ofline/:id",userController.offline);
