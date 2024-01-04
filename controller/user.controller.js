@@ -450,7 +450,7 @@ module.exports.acceptfriend= async (req,res)=>{
     try {
         // add to the follower liste
             await InvitationMedel.findOneAndUpdate({
-                "userID":req.params.id
+                "userID":req.params.id,
             },{
                 $pull:{reciverReqFreinds:{_id:req.body.usersender}}
             },{
@@ -672,7 +672,7 @@ module.exports.getAllUseerBlock= async (req,res) =>{
 
 }
 //signaler user
-
+ 
 module.exports.signaleCompte = async (req, res) => {
     if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.user)) {
         return res.status(400).send('ID unknown ' + req.params.id);
@@ -721,15 +721,91 @@ module.exports.signaleCompte = async (req, res) => {
         return res.status(500).json({ message: err });
     }
 };
+//Message d’ore 
+//lettre d'or par defaut 10 
+//user peut achéter des lettre prix unitaire par defaut 3.99
 
+module.exports.nbLettreAcheter = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const updates = req.body; // Request body should contain the fields you want to update
+
+        // Find the user by ID to get the current nombre
+        const user = await UserModel.findById(id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        let oldNombre = 0;
+        let newNombre = 0;
+
+        if ('lettredor' in user && user.lettredor.length > 0 && 'nombre' in user.lettredor[0]) {
+            oldNombre = user.lettredor[0].nombre;
+        }
+
+        if ('lettredor' in updates && 'nombre' in updates.lettredor[0]) {
+            newNombre = updates.lettredor[0].nombre;
+        }
+
+        // Calculate prixTotal based on the updated nombre value
+        const prixTotal = ( newNombre) * 3.99;
+
+        // Update nombre and prixTotal in the updates object
+        updates.lettredor = [{
+            nombre: oldNombre + newNombre,
+            prixTotal: prixTotal
+        }];
+
+        // Update the user's information with the new values
+        const updatedUser = await UserModel.findByIdAndUpdate(id, updates, { new: true });
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json(updatedUser);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
 //Liste Friends of one user 
-//Message d’ore
-//Contact & Affichage (public, privé, moi uniquement)
+module.exports.getUserFriends = async (req, res) => {
+    const userId = req.params.id;
+    const users = await userModel.findById(userId).select('friends');//afiicher touts les information des users sauf password
+    res.status(200).json(users);
+};
+
+//Contact & Affichage (public, privé, moi uniquement) mey5demch 
+module.exports.updateFriendVisibility = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { visibility } = req.body; // Assuming the request body contains { "visibility": true } or false
+
+        // Find the user by ID
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update the visibility of friends list
+        user.friends.visibility = visibility;
+        await user.save();
+
+        return res.status(200).json({ message: 'Visibility updated successfully' });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
 //Media compte user 
+//couvertiture 
+//avatar 
 
 
 
 
+ 
   
 
 //api admin 

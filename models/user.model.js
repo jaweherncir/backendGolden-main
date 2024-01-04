@@ -159,12 +159,7 @@ const userSchema = new mongoose.Schema(
         visibile:{  type: Boolean,
             default: true
         },
-        friends:{
-            type:[ObjectID],
-            ref:"user",
-            default:true
-
-        },
+   
         blocked:{
             type:[ObjectID],
             ref:"user",
@@ -219,10 +214,19 @@ const userSchema = new mongoose.Schema(
             Hobbies:[String],
             GoutsMusicaux:[String],
         },
-        lettredor:{
-            type:Number,
-            default:10
-        },
+      
+        lettredor: [
+            {
+                nombre: {
+                    type: Number,
+                    default: 10
+                },
+                prixTotal: {
+                    type: Number,
+                    default: 0
+                  }
+            }
+        ],
         albumacces:{
             type:[
                 {
@@ -243,7 +247,17 @@ const userSchema = new mongoose.Schema(
                 date: Date,
                 heure: String
             }
-        ]
+        ],
+        friends:{
+            type:[ObjectID],
+            ref:"user",
+           
+            visibility:{
+                type:Boolean,
+                default:false
+            }
+
+        },
     }
     ,
     {
@@ -252,12 +266,7 @@ const userSchema = new mongoose.Schema(
 );
 
 
-//play function before save into display : 'block'
-/*userSchema.pre("save", async function(next) {
-    const  salt = await bcrypt.genSalt();
-    this.password = await bcrypt.hash(this.password,salt);
-    next();
-});//avant faire le save dans la base de donne faire cette function*/
+
 userSchema.statics.login = async function(email, password) {
     const user = await this.findOne({ email }).populate({path:'photo',select:['picture']});
     if (user) {
