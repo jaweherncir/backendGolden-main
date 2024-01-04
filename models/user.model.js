@@ -231,7 +231,19 @@ const userSchema = new mongoose.Schema(
                     duree:Date
                 }
             ]
-        }
+        },
+        signaler: [
+            {
+                userSignaler: {
+                    type: [ObjectID],
+                    ref: 'user'
+                },
+                choix: [String],
+                naturecontenue: String,
+                date: Date,
+                heure: String
+            }
+        ]
     }
     ,
     {

@@ -665,6 +665,67 @@ module.exports.userInfoDebocked = async (req, res) => {
         return res.status(500).json({ message: err.message });
     }
 };
+module.exports.getAllUseerBlock= async (req,res) =>{
+    const users = await userModel.find().select('blocked')
+        .populate({path:'blocked',select:['nom','prenom','email','genre','numero','villeconnue','dateNass']});//afiicher touts les information des users sauf password
+    res.status(200).json(users[0].blocked);
+
+}
+//signaler user
+
+module.exports.signaleCompte = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.user)) {
+        return res.status(400).send('ID unknown ' + req.params.id);
+    }
+
+    try {
+        const { choix, naturecontenue, date, heure } = req.body;
+
+        const user = await UserModel.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        const isUserSignaled = user.signaler.some(
+            (item) => item.userSignaler.toString() === req.body.user.toString()
+        );
+
+        if (isUserSignaled) {
+            return res.status(400).send({ message: "Cet utilisateur a déjà été signalé." });
+        }
+
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            req.params.id,
+            {
+                $addToSet: {
+                    signaler: {
+                        userSignaler: req.body.user,
+                        choix: choix || [], // Ensure it's an array even if empty
+                        naturecontenue: naturecontenue || [],
+                        date: date ? new Date(date) : new Date(), // Convert to Date object
+                        heure: heure || ''
+                    }
+                }
+            },
+            { new: true, upsert: true }
+        );
+
+        if (updatedUser) {
+            return res.status(201).send({
+                message: 'Votre signalement a été envoyé à nos équipes et sera examiné aussitôt que possible. Merci de nous avoir aidé à rendre notre communauté plus sûre',
+                data: updatedUser
+            });
+        }
+    } catch (err) {
+        return res.status(500).json({ message: err });
+    }
+};
+
+//Liste Friends of one user 
+//Message d’ore
+//Contact & Affichage (public, privé, moi uniquement)
+//Media compte user 
 
 
 
@@ -678,25 +739,10 @@ module.exports.getAllUsers= async (req,res) =>{
 
 }
 
-
-
-module.exports.getAllUseerBlock= async (req,res) =>{
-    const users = await userModel.find().select('blocked')
-        .populate({path:'blocked',select:['nom','prenom','email','genre','numero','villeconnue','dateNass']});//afiicher touts les information des users sauf password
-    res.status(200).json(users[0].blocked);
-
-}
-
-
-
-
 module.exports.getAllCountUsers= async (req,res) =>{
     const users = await userModel.find();//afiicher touts les information des users sauf password
     res.status(200).json({result:users.length});
 }
-
-
-
 module.exports.follow = async (req,res) => {
     if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.idToFollow) )
         return res.status(400).send('ID unknown '+req.params.id);
