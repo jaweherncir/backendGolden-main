@@ -258,6 +258,7 @@ const userSchema = new mongoose.Schema(
             }
 
         },
+        TyoeCompte:{type:String , default:'Solo',},
     }
     ,
     {

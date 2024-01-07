@@ -798,11 +798,11 @@ module.exports.updateFriendVisibility = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
-//Media compte user 
+
 //couvertiture 
 //avatar 
 
-
+//Media compte user 
 
 
  
@@ -908,7 +908,7 @@ module.exports.unfollow = async (req,res) => {
 
 
 
-
+ 
 
 
 

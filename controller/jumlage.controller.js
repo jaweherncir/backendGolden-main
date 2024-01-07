@@ -15,35 +15,28 @@ const ObjectID = require("mongoose").Types.ObjectId;
 
 
 }
-module.exports.createJumlage=async (req,res) => {
-    if (!ObjectID.isValid(req.body.userdemande) || !ObjectID.isValid(req.body.useraccept))
-        return res.status(400).send("ID unknow : "+req.params.id);
-   // const userdemande= await getUserjumleParID(req.params.id);
-    //const useraccept= await getUserjumleParID(req.body.id);
-    const newjumlage= new JumlageModel({
-        userdemandejum:req.body.userdemande,
-        useracceptjum:req.body.useraccept
+module.exports.createJumlage = async (req, res) => {
+    const userdemandejum = req.body.userdemandejum;
+    const useracceptjum = req.params.useracceptjum;
+
+    if (!ObjectID.isValid(useracceptjum))
+        return res.status(400).send("useracceptjum ID unknown");
+
+    const newjumlage = new JumlageModel({
+        userdemandejum: userdemandejum,
+        useracceptjum: useracceptjum
     });
+
     try {
-
-        const jumlage= await newjumlage.save();
-        if (jumlage){
+        const jumlage = await newjumlage.save();
+        if (jumlage) {
             return res.status(200).json(jumlage);
-            //suprimernotifsJumlage(req.body.id,req.params.id);
-            //InvitationController.refuseDemandeJumlage(req,res);
-
         }
-
-
-
-        /*res.status(200).send({user1:{userdemande},user2:{useraccept}});
-        console.log(userdemande.email);
-        console.log(useraccept.email);*/
-    }catch(err){
-        res.status(400).send({eroors:err});
+    } catch (err) {
+        res.status(400).send({ errors: err });
     }
-
 }
+
 module.exports.DeleteUserDuo= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))
         return res.status(400).send("Id unknow : "+req.params.id);
