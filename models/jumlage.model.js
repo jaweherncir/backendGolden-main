@@ -9,7 +9,8 @@ const jumlageSchema= new mongoose.Schema(
         useracceptjum:{
             type:ObjectId,
             ref:"user"
-        }
+        },
+        TyoeCompte:{type:String , default:'Duo',},
     },
     {
         timestamps:true

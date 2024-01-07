@@ -1,10 +1,10 @@
 const router = require("express").Router();
 const jumlageController = require("../controller/jumlage.controller");
-
+ 
 
 //accept jumlage (ce tratiement sera effectue dans notificationController)
 //createJumlage(acccept jumlage and supprimer notification and invitation)
-router.post('/user-duo',jumlageController.createJumlage);
+router.post('/user-duo/:useracceptjum',jumlageController.createJumlage);
 
 
 //suprimer compte duo

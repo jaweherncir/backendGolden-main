@@ -4,7 +4,7 @@ const NotificationModel=require("../models/notifications.model");
 
 const ObjectId = require("mongoose").Types.ObjectId;
 
-
+//invitation jumlage 
 module.exports.invitationJumlage=  (req,res) =>{
     if(!ObjectId.isValid(req.params.id) || !ObjectId.isValid(req.body.id))
         return res.status(400).send("ID UNKNow"+req.params.id);
@@ -67,7 +67,10 @@ module.exports.invitationJumlage=  (req,res) =>{
     }
 
 }
-
+//acceptation jumlage et creation compte duo
+exports.jumlage_createUser = async (req,res) =>{
+    
+}
 module.exports.refuseDemandeJumlage= async (req,res,next) =>{
     //res.status(200).send({message:"bien"});
     if(!ObjectId.isValid(req.params.id) || !ObjectId.isValid(req.body.usersender))
