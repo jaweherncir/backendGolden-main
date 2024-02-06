@@ -17,7 +17,7 @@ router.patch('/invit-contact/:id',invitationController.InvitationContact);
 router.patch('/annuler-contact/:id',invitationController.AnnulerInvitationContact);
 router.patch('/refuse-contact/:id',invitationController.RefuseInvitationContact);
 router.patch('/invit-album/:id',invitationController.InvitationAlbum);
-
+router.patch('/:albumId/photos/:photoId/invitation',invitationController.InvitationPhoto);
 
 
 

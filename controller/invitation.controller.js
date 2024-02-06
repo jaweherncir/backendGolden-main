@@ -346,7 +346,7 @@ module.exports.InvitationAlbum=  async  (req,res) =>{
             {
                 $addToSet:{
                     senderAccesAlbum: {
-                        _id:req.body.id,
+                        _id:req.body.id, 
                         timestamp:new Date().getTime(),
                         duree:req.body.duree
                     },
@@ -394,4 +394,67 @@ module.exports.InvitationAlbum=  async  (req,res) =>{
     }
 
 }
-
+module.exports.InvitationPhoto = async (req, res) => {
+    if (!ObjectId.isValid(req.params.albumId) || !ObjectId.isValid(req.params.photoId) || !ObjectId.isValid(req.body.id))
+      return res.status(400).send("Invalid ID");
+  
+    try {
+      await InvitationMedel.findOneAndUpdate(
+        { userID: req.params.id },
+        {
+          $addToSet: {
+            senderAccessPhoto: {
+              albumId: req.params.albumId,
+              photoId: req.params.photoId,
+              timestamp: new Date().getTime(),
+              duree: req.body.duree,
+            },
+          },
+        },
+        { new: true, upsert: false },
+        (err, data) => {
+          if (!err) {
+            return res.status(201).json(data);
+          } else {
+            return res.status(400).json(err);
+          }
+        }
+      );
+  
+      await InvitationMedel.findOneAndUpdate(
+        { userID: req.body.id },
+        {
+          $addToSet: {
+            receiverAccessPhoto: {
+              albumId: req.params.albumId,
+              photoId: req.params.photoId,
+              timestamp: new Date().getTime(),
+              duree: req.body.duree,
+            },
+          },
+        },
+        { new: true, upsert: false }
+      );
+  
+      await NotificationModel.findOneAndUpdate(
+        { userID: req.body.id },
+        {
+          $addToSet: {
+            receiverAccessPhoto: {
+              userSenderId: req.params.id,
+              albumId: req.params.albumId,
+              photoId: req.params.photoId,
+              timestamp: new Date().getTime(),
+              duree: req.body.duree,
+            },
+          },
+        },
+        { new: true, upsert: false }
+      );
+  
+      return res.status(200).json({ message: "Invitation sent successfully" });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).send("Internal Server Error");
+    }
+  }; 

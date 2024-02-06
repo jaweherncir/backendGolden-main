@@ -68,14 +68,14 @@ module.exports.signUp = async (req, res) => {
         res.cookie('token', token, { httpOnly: true, maxAge: 3600000 }); // 'maxAge' is set to 1 hour (in milliseconds)
   
         // Create and save related models (if needed)
-        const newInvitModel = new InvitationModel({ userID: user._id });
+        const newInvitModel = new InvitationModel({ userID: user._id }); await newInvitModel.save();
         const newNotificationsModel = new NotificationsModel({ userID: user._id });
         const newRencontreModel = new RencontreModel({ userID: user._id });
-  
-        await newInvitModel.save();
+        const newAlbumModel = new AlbumModel({ userId: user._id });
+       
         await newNotificationsModel.save();
         await newRencontreModel.save();
-  
+        await newAlbumModel.save();
         res.status(201).send(user);
       }
     } catch (err) {
@@ -368,91 +368,65 @@ module.exports.BannerCompte = async (req, res) => {
 //STEP 2 INSCRIPTION
 module.exports.updatePhotoProfil = async (req, res) => {
     if (!ObjectID.isValid(req.params.id)) {
-        return res.status(400).send('ID unknown: ' + req.params.id);
+        return res.status(400).json({ error: 'Invalid user ID: ' + req.params.id });
     }
-    
+
     try {
         const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: `Golden/users/${req.params.id}/profile_photos`, // Store images in a folder based on user ID
+            folder: `users/${req.params.id}/profile_photos`,
         });
 
         // Update the user model with the photo URL
         const updatedUser = await UserModel.findByIdAndUpdate(
             { _id: req.params.id },
-            {
-                $set: {
-                    photo: result.secure_url // Store the secure URL of the uploaded image in the user model
-                }
-            },
+            { $set: { photo: result.secure_url } },
             { new: true, upsert: true, setDefaultsOnInsert: true }
         );
 
         // Update the user's album with the photo URL
         const updatedAlbum = await AlbumModel.findOneAndUpdate(
             { userId: req.params.id },
-            {
-                $push: {
-                    photos: {
-                        url: result.secure_url
-                    }
-                }
-            },
+            { $push: { photos: { url: result.secure_url, visible: true } } },
             { new: true, upsert: true }
         );
 
-        return res.send({  album: updatedAlbum }); // Send the updated user and album data
+        return res.status(200).json({ user: updatedUser, album: updatedAlbum });
     } catch (err) {
-        return res.status(500).json({ message: err });
+        console.error('Error updating profile photo:', err);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
 
+
 module.exports.updatePhotoCouvertir= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id)) {
-        return res.status(400).send('ID unknown: ' + req.params.id);
+        return res.status(400).json({ error: 'Invalid user ID: ' + req.params.id });
     }
-    
+
     try {
         const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: `Golden/users/${req.params.id}/couvertir_photos`, // Store images in a folder based on user ID
+            folder: `users/${req.params.id}/profile_photos`,
         });
 
         // Update the user model with the photo URL
         const updatedUser = await UserModel.findByIdAndUpdate(
             { _id: req.params.id },
-            {
-                $set: {
-                    couvertir: result.secure_url // Store the secure URL of the uploaded image in the user model
-                }
-            },
+            { $set: { couvertir: result.secure_url } },
             { new: true, upsert: true, setDefaultsOnInsert: true }
         );
 
         // Update the user's album with the photo URL
         const updatedAlbum = await AlbumModel.findOneAndUpdate(
             { userId: req.params.id },
-            {
-                $push: {
-                    photos: {
-                        url: result.secure_url
-                    }
-                }
-            },
+            { $push: { photos: { url: result.secure_url, visible: true } } },
             { new: true, upsert: true }
         );
 
-        return res.send({  album: updatedAlbum }); // Send the updated user and album data
+        return res.status(200).json({ user: updatedUser, album: updatedAlbum });
     } catch (err) {
-        return res.status(500).json({ message: err });
+        console.error('Error updating profile photo:', err);
+        return res.status(500).json({ error: 'Internal server error' });
     }
-   
-   
-   
-   
-   
-   
-   
-      
-   
    }
 //compte pirate 
 //find compte with email user 
@@ -482,7 +456,7 @@ module.exports.findUserByEmail = async (req, res) => {
 
 
 
-
+ 
 
 
 //add genre

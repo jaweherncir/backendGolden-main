@@ -15,18 +15,25 @@ const AlbumSchema = new mongoose.Schema(
             {
                 url: {
                     type: String,
-                    required: true
+                    required: true,
+                },
+                visible: {
+                    type: Boolean,
+                    default: true,
                 },
                 timestamp: {
                     type: Number,
                     default: Date.now
-                }
+                },
+                
+                
+
             }
         ]
     },
     {
         timestamps: true
     }
-);
+)
 
 module.exports=mongoose.model('album',AlbumSchema);
