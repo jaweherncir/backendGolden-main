@@ -1,5 +1,5 @@
 const AlbumModel= require("../models/album.model");
-const fs = require("fs");
+const fs = require("fs");  
 const moment = require("moment");
 const UserModel = require("../models/user.model");
 const EvenementProModel = require("../models/evenementpro");
@@ -7,6 +7,200 @@ const NotificationModel = require("../models/notifications.model");
 const InvitationMedel = require("../models/invitation.model");
 const userModel = require("../models/user.model");
 const ObjectID = require("mongoose").Types.ObjectId;
+const cloudinary = require('cloudinary').v2;
+const  multer = require("multer");
+
+cloudinary.config({
+    cloud_name: "dm0c8st6k",
+    api_key: "541481188898557",
+    api_secret: "6ViefK1wxoJP50p8j2pQ7IykIYY"
+  }); 
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, "client/public/uploads/album");
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname);
+    },
+});
+
+
+
+const upload = multer({ storage: storage }); 
+module.exports.getAllAlbumByIDUser=async (req,res)=>{
+    try {
+        const userId = req.params.userId;
+
+        // Find the album by userId
+        const album = await AlbumModel.findOne({ userId });
+
+        if (!album) {
+            return res.status(404).json({ error: 'Album not found for the given userId.' });
+        }
+
+        return res.status(200).json({ album });
+    } catch (err) {
+        console.error('Error retrieving album:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+module.exports.AddPhotoAlbum = async (req, res) => {
+    if (!ObjectID.isValid(req.params.id)) {
+        return res.status(400).json({ error: 'Invalid album ID: ' + req.params.id });
+    }
+
+    try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: `users/${req.params.id}/album`,
+        });
+
+   
+
+        // Update the user's album with the photo URL
+        const updatedAlbum = await AlbumModel.findOneAndUpdate(
+            { userId: req.params.id },
+            { $push: { photos: { url: result.secure_url, visible: true } } },
+            { new: true, upsert: true }
+        );
+
+        return res.status(200).json({ album: updatedAlbum });
+    } catch (err) {
+        console.error('Error adding  photo:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+};
+module.exports.DeletePhotoFromAlbum = async (req, res) => {
+    try {
+        const photoId = req.params.id;
+    
+        // Find the album containing the photo
+        const album = await AlbumModel.findOne({ "photos._id": photoId });
+    
+        if (!album) {
+          return res.status(404).json({ message: 'Photo not found in album' });
+        }
+    
+        // Remove the photo from the photos array
+        album.photos = album.photos.filter(photo => photo._id.toString() !== photoId);
+    
+        // Save the updated album
+        await album.save();
+    
+        res.status(200).json({ message: 'Photo deleted successfully' });
+      } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ error: 'Server Error' });
+      }
+};
+//get all image privée of album 
+module.exports.getPrivateImage=async(req,res)=>{
+    try {
+        const userId = req.params.userId;
+    
+        // Find the album for the specified userId
+        const album = await AlbumModel.findOne({ userId });
+    
+        if (!album) {
+          return res.status(404).json({ message: 'Album not found for the specified user' });
+        }
+    
+        // Extract visible photos from the album
+        const visiblePhotos = album.photos.filter(photo => photo.visible);
+    
+        res.status(200).json(visiblePhotos);
+      } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ error: 'Server Error' });
+      }
+}
+//get all image public of album
+module.exports.getPublicImage = async (req, res) => {
+    try {
+      const userId = req.params.userId;
+  
+      // Find the album for the specified userId
+      const album = await AlbumModel.findOne({ userId });
+  
+      if (!album) {
+        return res.status(404).json({ message: 'Album not found for the specified user' });
+      }
+  
+      // Extract photos with visibility set to false from the album
+      const invisiblePhotos = album.photos.filter(photo => !photo.visible);
+  
+      res.status(200).json(invisiblePhotos);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Server Error' });
+    }
+  };
+module.exports.change = async (req, res) => {
+    const { albumId, photoId } = req.params;
+    const { visible } = req.body;
+  
+    try {
+      const album = await AlbumModel.findById(albumId);
+  
+      if (!album) {
+        return res.status(404).json({ message: "Album not found" });
+      }
+  
+      const photoIndex = album.photos.findIndex((photo) =>
+        photo._id.equals(photoId)
+      );
+  
+      if (photoIndex === -1) {
+        return res.status(404).json({ message: "Photo not found in the album" });
+      }
+  
+      album.photos[photoIndex].visible = visible;
+      await album.save();
+  
+      res.json({ message: "Visibility changed successfully", album });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  };
+module.exports.changeVisibiltyAlbum = async (req, res) => {
+    const { albumId } = req.params;
+    const { visible } = req.body;
+  
+    try {
+      const album = await AlbumModel.findById(albumId);
+  
+      if (!album) {
+        return res.status(404).json({ message: "Album not found" });
+      }
+  
+      album.visible = visible;
+      await album.save();
+  
+      res.json({ message: "Album visibility changed successfully", album });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  };
+
+
+
 module.exports.getAllAlbumByID=async (req,res)=>{
     if (!ObjectID.isValid(req.params.id))
         return res.status(400).send("ID unknown : " + req.params.id);
@@ -15,6 +209,7 @@ module.exports.getAllAlbumByID=async (req,res)=>{
         else console.log("ID unknown : " + err);
     })
 }
+
 module.exports.getAlbumProfileByUSerID=async (req,res)=>{
     if (!ObjectID.isValid(req.params.id))
         return res.status(400).send("ID unknown : " + req.params.id);
@@ -69,32 +264,7 @@ module.exports.getPhotoCouvertirFromAlbumByUserId=async (req,res)=>{
     )
 
 }
-module.exports.AddPhotoAlbum= async (req,res) =>{
-    if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
-        return res.status(400).send('ID unknown : '+ req.params.id);
-    let albumModel;
-    try {
-        albumModel = new AlbumModel({
-            userId: req.params.id,
-            picture: {
-                data: fs.readFileSync("client/public/uploads/album/" + req.file.filename),
-                contentType: "image/jpg",
-                timestamp: new Date().getTime()
-            }
-        });
-         await albumModel.save((err,reponse)=>{
-             if (reponse)
-                 return res.status(201).send(reponse)
-             else
-                 return res.status(401).send(err)
 
-         });
-    } catch (err) {
-
-        return res.status(500).json({message: err});
-    }
-
-}
 module.exports.PrivialiserPhotoFromALbum= async (req,res) =>{
     if (!ObjectID.isValid(req.params.id))//tester si le id est connu de la base de donne
         return res.status(400).send('ID unknown : '+ req.params.id);
@@ -119,28 +289,8 @@ module.exports.PrivialiserPhotoFromALbum= async (req,res) =>{
     }
 
 }
-module.exports.DeletePhotoFromAlbum = async (req,res)=>{
-    if (!ObjectID.isValid(req.params.id))
-        return res.status(400).send("Id unknow : "+req.params.id);
-    try {
-        await AlbumModel.findByIdAndRemove(
-            req.params.id,
-            (err,data)=>{
-                if(!err)
-                    res.status(200).send({result:"succes delete"});
-                else
-                    res.status(401).send({result:"delete error :"+err});
-                //console.log("delete error : "+err);
-            }
-        );
 
-    }catch (err)
-    {
-        return res.status(500).json({message: err});
-    }
-
-
-}
+ 
 module.exports.accepAccesAlbum=async (req,res)=>{
     if (!ObjectID.isValid(req.params.id) || !ObjectID.isValid(req.body.usersender)  )
         return res.status(400).send('ID unknown '+req.params.id);
@@ -233,7 +383,7 @@ module.exports.accepAccesAlbum=async (req,res)=>{
     }
 
 }
-
+ 
 
 
 
